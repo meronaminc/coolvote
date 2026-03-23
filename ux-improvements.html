@@ -1,0 +1,921 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>쿨투표 UX 개선 제안서</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Apple SD Gothic Neo', 'Noto Sans KR', sans-serif; background: #f4f6fb; color: #222; }
+
+    /* 헤더 */
+    .doc-header {
+      background: linear-gradient(135deg, #3b82f6, #6366f1);
+      color: white;
+      padding: 36px 48px;
+    }
+    .doc-header h1 { font-size: 26px; font-weight: 700; margin-bottom: 6px; }
+    .doc-header p  { font-size: 14px; opacity: 0.85; }
+
+    /* 섹션 */
+    .section { padding: 40px 48px; }
+    .section + .section { border-top: 1px solid #e2e8f0; }
+
+    .section-title {
+      display: flex; align-items: center; gap: 10px;
+      font-size: 20px; font-weight: 700; margin-bottom: 28px;
+    }
+    .section-badge {
+      font-size: 12px; font-weight: 600; padding: 3px 10px;
+      border-radius: 20px; background: #eff6ff; color: #3b82f6;
+    }
+
+    /* Before / After 래퍼 */
+    .compare { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 32px; }
+    .compare-box { border-radius: 14px; overflow: hidden; }
+    .compare-box.before { border: 2px solid #fca5a5; }
+    .compare-box.after  { border: 2px solid #86efac; }
+
+    .compare-label {
+      padding: 8px 16px; font-size: 12px; font-weight: 700; letter-spacing: 0.5px;
+    }
+    .before .compare-label { background: #fee2e2; color: #b91c1c; }
+    .after  .compare-label { background: #dcfce7; color: #15803d; }
+
+    .compare-body { padding: 20px; background: #fff; }
+
+    /* 모의 UI 공통 */
+    .mock-popup {
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      padding: 24px;
+      max-width: 340px;
+      margin: 0 auto;
+    }
+    .mock-popup h3 { font-size: 16px; font-weight: 700; margin-bottom: 6px; }
+    .mock-popup .sub { font-size: 12px; color: #64748b; margin-bottom: 18px; line-height: 1.5; }
+    .mock-popup .field-label { font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #374151; }
+    .mock-popup input[type=text] {
+      width: 100%; border: 1.5px solid #d1d5db; border-radius: 8px;
+      padding: 8px 12px; font-size: 13px; color: #374151; margin-bottom: 14px;
+      outline: none;
+    }
+    .mock-popup input[type=text].highlight { border-color: #3b82f6; background: #eff6ff; }
+    .mock-popup .row {
+      display: flex; align-items: flex-start; justify-content: space-between;
+      margin-bottom: 14px; gap: 12px;
+    }
+    .mock-popup .row-info { flex: 1; }
+    .mock-popup .row-info .name { font-size: 13px; font-weight: 600; }
+    .mock-popup .row-info .desc { font-size: 11px; color: #94a3b8; margin-top: 2px; }
+    .toggle {
+      width: 36px; height: 20px; border-radius: 10px; flex-shrink: 0; margin-top: 2px;
+      position: relative; cursor: pointer;
+    }
+    .toggle.on  { background: #3b82f6; }
+    .toggle.off { background: #d1d5db; }
+    .toggle::after {
+      content: ''; position: absolute; top: 3px;
+      width: 14px; height: 14px; border-radius: 50%; background: white;
+      transition: left 0.2s;
+    }
+    .toggle.on::after  { left: 19px; }
+    .toggle.off::after { left: 3px; }
+    .btn-row { display: flex; gap: 10px; margin-top: 20px; justify-content: flex-end; }
+    .btn { padding: 9px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; border: none; cursor: pointer; }
+    .btn-cancel { background: #f1f5f9; color: #475569; }
+    .btn-primary { background: #3b82f6; color: white; }
+
+    /* 슬라이드 에디터 모의 UI */
+    .mock-editor {
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      overflow: hidden;
+      background: #fff;
+    }
+    .mock-topbar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px; background: #f8fafc;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .mock-topbar .title { font-size: 14px; font-weight: 700; color: #1e293b; }
+    .mock-tabs { display: flex; gap: 4px; }
+    .mock-tab {
+      padding: 5px 12px; border-radius: 6px; font-size: 12px; font-weight: 600;
+      cursor: pointer; color: #64748b;
+    }
+    .mock-tab.active { background: #3b82f6; color: white; }
+    .mock-tab.center { margin: 0 auto; }
+    .mock-actions { display: flex; gap: 8px; }
+    .mock-action-btn {
+      padding: 5px 12px; border-radius: 6px; font-size: 12px;
+      border: 1px solid #e2e8f0; background: white; color: #374151; cursor: pointer;
+    }
+    .mock-action-btn.primary { background: #3b82f6; color: white; border-color: #3b82f6; }
+    .mock-body { display: flex; min-height: 140px; }
+    .mock-canvas { flex: 1; background: #f8fafc; display: flex; align-items: center; justify-content: center; }
+    .mock-canvas span { font-size: 12px; color: #94a3b8; }
+    .mock-sidebar {
+      width: 160px; border-left: 1px solid #e2e8f0; padding: 14px;
+      background: white;
+    }
+    .mock-sidebar .sidebar-title {
+      font-size: 12px; font-weight: 700; color: #374151;
+      margin-bottom: 10px; padding-bottom: 6px;
+      border-bottom: 1px solid #e2e8f0;
+    }
+    .mock-sidebar .option-row {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 10px;
+    }
+    .mock-sidebar .option-label { font-size: 11px; color: #64748b; }
+    .mini-toggle {
+      width: 28px; height: 16px; border-radius: 8px; position: relative;
+    }
+    .mini-toggle.on  { background: #3b82f6; }
+    .mini-toggle.off { background: #d1d5db; }
+    .mini-toggle::after {
+      content: ''; position: absolute; top: 2px;
+      width: 12px; height: 12px; border-radius: 50%; background: white;
+    }
+    .mini-toggle.on::after  { left: 14px; }
+    .mini-toggle.off::after { left: 2px; }
+
+    /* 프레젠테이션 모드 모의 UI */
+    .mock-pres {
+      border-radius: 10px; overflow: hidden;
+      border: 1px solid #e2e8f0; background: #fff;
+    }
+    .mock-pres-main {
+      background: #f1f5f9; min-height: 160px;
+      display: flex; align-items: center; justify-content: center;
+      position: relative; padding: 20px;
+    }
+
+    /* 상단 호버 영역 (상단 20%) */
+    .hover-zone {
+      position: absolute; top: 0; left: 0; right: 0;
+      height: 32px; /* 전체 높이의 약 20% */
+      display: flex; align-items: center; justify-content: center;
+      cursor: default;
+      z-index: 10;
+    }
+    .hover-zone-label {
+      font-size: 10px; color: #94a3b8; letter-spacing: 0.3px;
+      background: rgba(241,245,249,0.9); padding: 2px 8px; border-radius: 4px;
+      border: 1px dashed #cbd5e1;
+    }
+    /* 상단 중앙 X 버튼 - 평소엔 숨김 */
+    .top-close-btn {
+      position: absolute; top: 6px; left: 50%; transform: translateX(-50%);
+      width: 32px; height: 32px; border-radius: 50%;
+      background: rgba(239,68,68,0.85); color: white;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 14px; font-weight: 700; cursor: pointer;
+      opacity: 0; transition: opacity 0.2s ease;
+      box-shadow: 0 2px 10px rgba(239,68,68,0.4);
+      z-index: 20;
+    }
+    /* 호버 영역에 마우스 올리면 X 버튼 노출 */
+    .mock-pres-interactive:hover .top-close-btn,
+    .mock-pres-interactive.show-close .top-close-btn {
+      opacity: 1;
+    }
+    /* ESC 힌트 툴팁 */
+    .esc-hint {
+      position: absolute; top: 44px; left: 50%; transform: translateX(-50%);
+      background: rgba(15,23,42,0.85); color: #e2e8f0;
+      font-size: 10px; padding: 3px 8px; border-radius: 4px;
+      white-space: nowrap; opacity: 0; transition: opacity 0.2s ease;
+      pointer-events: none; z-index: 20;
+    }
+    .mock-pres-interactive:hover .esc-hint,
+    .mock-pres-interactive.show-close .esc-hint {
+      opacity: 1;
+    }
+    .mock-pres-qr {
+      position: absolute; top: 12px; right: 12px;
+      width: 56px; height: 56px; background: #fff;
+      border: 2px solid #e2e8f0; border-radius: 6px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; color: #94a3b8;
+    }
+    .mock-pres-qr.large {
+      width: 100px; height: 100px; font-size: 10px;
+    }
+    .mock-pres-qr-btn {
+      position: absolute; top: 12px; right: 12px;
+      display: flex; flex-direction: column; align-items: center; gap: 4px;
+    }
+    .mock-pres-qr-btn .qr-box {
+      width: 70px; height: 70px; background: #fff;
+      border: 2px solid #3b82f6; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 9px; color: #374151; cursor: pointer;
+      box-shadow: 0 2px 8px rgba(59,130,246,0.2);
+    }
+    .mock-pres-qr-btn .qr-hint {
+      font-size: 9px; color: #3b82f6; background: #eff6ff;
+      padding: 2px 6px; border-radius: 4px;
+    }
+    .mock-pres-ov { display: flex; align-items: center; justify-content: center; }
+    .mock-pres-ov .ov-text { font-size: 13px; color: #475569; }
+    .mock-pres-bar {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 16px; background: rgba(0,0,0,0.85);
+    }
+    .mock-pres-bar .bar-stats { font-size: 11px; color: #94a3b8; }
+    .mock-pres-bar .bar-stats span { color: white; font-weight: 600; }
+    .mock-pres-bar .bar-icons { display: flex; gap: 8px; align-items: center; }
+    .bar-icon {
+      width: 28px; height: 28px; border-radius: 6px;
+      background: rgba(255,255,255,0.1); display: flex; align-items: center;
+      justify-content: center; font-size: 12px; color: white; cursor: pointer;
+    }
+    .bar-icon.danger { background: rgba(239,68,68,0.25); color: #fca5a5; }
+    .bar-icon.hidden { opacity: 0.2; }
+    .bar-icon.qr-icon { background: rgba(59,130,246,0.3); color: #93c5fd; }
+    .badge-new {
+      background: #3b82f6; color: white; font-size: 10px;
+      padding: 2px 6px; border-radius: 4px; font-weight: 700;
+    }
+    .participation-badge {
+      background: rgba(255,255,255,0.15); color: white;
+      font-size: 12px; font-weight: 700; padding: 4px 12px;
+      border-radius: 20px;
+    }
+
+    /* 문제/개선 설명 카드 */
+    .issue-card {
+      background: #fff7ed; border-left: 4px solid #f97316;
+      border-radius: 0 8px 8px 0; padding: 12px 16px; margin-bottom: 10px;
+    }
+    .issue-card .issue-title { font-size: 13px; font-weight: 700; color: #c2410c; margin-bottom: 4px; }
+    .issue-card .issue-desc  { font-size: 12px; color: #7c2d12; line-height: 1.6; }
+    .fix-card {
+      background: #f0fdf4; border-left: 4px solid #22c55e;
+      border-radius: 0 8px 8px 0; padding: 12px 16px; margin-bottom: 10px;
+    }
+    .fix-card .fix-title { font-size: 13px; font-weight: 700; color: #15803d; margin-bottom: 4px; }
+    .fix-card .fix-desc  { font-size: 12px; color: #14532d; line-height: 1.6; }
+
+    /* 하이라이트 표시 */
+    .highlight-box {
+      border: 2px dashed #f97316; border-radius: 8px; padding: 4px 8px;
+      display: inline-block; background: #fff7ed;
+    }
+    .highlight-box.green {
+      border-color: #22c55e; background: #f0fdf4;
+    }
+    .new-field {
+      border: 2px dashed #22c55e !important;
+      background: #f0fdf4 !important;
+    }
+    .changed-text { color: #dc2626; text-decoration: line-through; font-size: 12px; }
+    .arrow { color: #94a3b8; margin: 0 4px; }
+    .new-text { color: #15803d; font-weight: 600; font-size: 12px; }
+
+    /* 변경 포인트 리스트 */
+    .change-list { list-style: none; margin-top: 16px; }
+    .change-list li {
+      display: flex; align-items: flex-start; gap: 8px;
+      font-size: 13px; margin-bottom: 8px; line-height: 1.5;
+    }
+    .change-list .dot-before { color: #ef4444; font-size: 16px; line-height: 1; }
+    .change-list .dot-after  { color: #22c55e; font-size: 16px; line-height: 1; }
+
+    .divider { border: none; border-top: 1px solid #e2e8f0; margin: 24px 0; }
+
+    @media (max-width: 768px) {
+      .compare { grid-template-columns: 1fr; }
+      .section { padding: 24px 20px; }
+      .doc-header { padding: 24px 20px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- 헤더 -->
+<div class="doc-header">
+  <h1>🗳️ 쿨투표 개선 요청서</h1>
+</div>
+
+<!-- ────────────────────────────────────────────
+     섹션 1. 기본 설정 팝업
+──────────────────────────────────────────── -->
+<div class="section">
+  <div class="section-title">
+    📋 투표 설정 팝업
+  </div>
+
+  <div class="compare">
+    <!-- BEFORE -->
+    <div class="compare-box before">
+      <div class="compare-label">⚠ 현재 (Before)</div>
+      <div class="compare-body">
+        <div class="mock-popup">
+          <h3>투표 설정</h3>
+          <p class="sub" style="color:#b91c1c;">기본 설정을 완료한 후 프레젠테이션을 생성해 주세요.</p>
+
+          <!-- 문제: 제목 필드 없음 -->
+          <div style="border:2px dashed #fca5a5;border-radius:8px;padding:10px;margin-bottom:14px;text-align:center;">
+            <span style="font-size:12px;color:#ef4444;">❌ 제목 입력 필드 없음</span>
+          </div>
+
+          <div class="row">
+            <div class="row-info">
+              <div class="name">실시간 투표</div>
+              <div class="desc">*프레젠테이션 중에만 사용자 참여가 가능</div>
+            </div>
+            <div class="toggle on"></div>
+          </div>
+          <div class="row">
+            <div class="row-info">
+              <div class="name" style="color:#b91c1c;">프레젠테이션 화면 동기화</div>
+              <div class="desc">*발표자와 사용자의 프레젠테이션 화면이 동기화</div>
+            </div>
+            <div class="toggle on"></div>
+          </div>
+          <div class="row">
+            <div class="row-info">
+              <div class="name">학교/학년/반 정보 확인</div>
+              <div class="desc">*그룹 비교 통계가 필요한 경우 켜주세요</div>
+            </div>
+            <div class="toggle off"></div>
+          </div>
+          <div class="row">
+            <div class="row-info">
+              <div class="name" style="color:#b91c1c;">목표 응답자 수</div>
+              <div class="desc">*목표하시는 응답 인원 수가 있다면 입력해주세요</div>
+            </div>
+          </div>
+          <input type="text" placeholder="숫자 입력" style="margin-bottom:14px;" />
+          <div style="font-size:10px;color:#b91c1c;margin-top:-10px;margin-bottom:14px;">⚠ 항상 입력창이 노출 — 입력 여부 불명확</div>
+          <div class="row">
+            <div class="row-info">
+              <div class="name">QR코드 노출</div>
+            </div>
+            <div class="toggle off"></div>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-cancel">취소</button>
+            <button class="btn btn-primary">프레젠테이션 생성</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AFTER -->
+    <div class="compare-box after">
+      <div class="compare-label">✅ 개선안 (After)</div>
+      <div class="compare-body">
+        <div class="mock-popup">
+          <h3>투표 설정</h3>
+          <p class="sub" style="color:#15803d;">투표를 위한 기능을 설정해 주세요.</p>
+
+          <!-- 1. 투표 제목 -->
+          <div class="field-label">투표 제목 <span style="color:#ef4444;">*</span></div>
+          <input type="text" class="highlight new-field" placeholder="예) 오늘 수업 이해도 확인" value="" />
+
+          <!-- 2. 실시간 투표 -->
+          <div class="row">
+            <div class="row-info">
+              <div class="name">실시간 투표</div>
+              <div class="desc">*진행 중에만 학생 참여 가능</div>
+            </div>
+            <div class="toggle on"></div>
+          </div>
+
+          <!-- 3. 참여자 화면 함께 넘기기 -->
+          <div class="row">
+            <div class="row-info">
+              <div class="name" style="color:#15803d;font-weight:700;">참여자 화면 함께 넘기기</div>
+              <div class="desc">*선생님이 슬라이드를 넘기면 학생 화면도 함께 이동</div>
+            </div>
+            <div class="toggle on"></div>
+          </div>
+
+          <!-- 4. QR코드 노출 -->
+          <div class="row">
+            <div class="row-info">
+              <div class="name">QR코드 노출</div>
+            </div>
+            <div class="toggle on"></div>
+          </div>
+
+          <!-- 5. 학교/학년/반 정보 입력 -->
+          <div class="row">
+            <div class="row-info">
+              <div class="name">학교/학년/반 정보 입력</div>
+            </div>
+            <div class="toggle off"></div>
+          </div>
+
+          <!-- 6. 목표 응답자 수 -->
+          <div class="row">
+            <div class="row-info">
+              <div class="name" style="color:#15803d;font-weight:700;">목표 응답자 수</div>
+              <div class="desc">*참여 현황을 확인하며 진행 가능</div>
+            </div>
+            <div class="toggle off" id="targetToggle" onclick="toggleTarget()" style="cursor:pointer;"></div>
+          </div>
+          <!-- Off 상태: 숨김 / On 상태: 노출 -->
+          <div id="targetInputBox" style="display:none;margin-bottom:14px;">
+            <input type="number" id="targetInput" placeholder="학생 수 입력 (예: 30)" min="1"
+              style="width:100%;border:1.5px solid #22c55e;border-radius:8px;padding:8px 12px;font-size:13px;color:#374151;outline:none;background:#f0fdf4;" />
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-cancel">취소</button>
+            <button class="btn btn-primary">투표 만들기</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 설정 재진입 팝업 (beta4) -->
+  <hr class="divider" />
+  <p style="font-size:14px;font-weight:700;margin-bottom:16px;color:#475569;">설정 버튼으로 재진입 시</p>
+  <div class="compare">
+    <div class="compare-box before">
+      <div class="compare-label">⚠ 현재 (Before)</div>
+      <div class="compare-body">
+        <div class="mock-popup" style="max-width:100%;">
+          <h3>투표 설정</h3>
+          <p class="sub" style="color:#b91c1c;">기본 설정을 완료한 후 프레젠테이션을 생성해 주세요.
+            <br/><span style="font-size:11px;">(이미 만들어진 상태인데 '생성해 주세요' 표시 → 맥락 오류)</span>
+          </p>
+          <div class="btn-row"><button class="btn btn-primary">닫기</button></div>
+        </div>
+      </div>
+    </div>
+    <div class="compare-box after">
+      <div class="compare-label">✅ 개선안 (After)</div>
+      <div class="compare-body">
+        <div class="mock-popup" style="max-width:100%;">
+          <h3>투표 설정</h3>
+          <p class="sub" style="color:#15803d;">설문을 위한 기능을 설정해 주세요.</p>
+          <div class="btn-row"><button class="btn btn-primary">닫기</button></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 변경 포인트 요약 -->
+  <ul class="change-list" style="margin-top:20px;">
+    <li><span class="dot-before">●</span><div><strong>제목 입력 없음</strong> → 제목 입력 필드 추가 (필수값 처리)</div></li>
+    <li><span class="dot-before">●</span><div><strong>"기본 설정을 완료한 후 프레젠테이션을 생성해 주세요"</strong> → <strong style="color:#15803d;">"설문을 위한 기능을 설정해 주세요."</strong></div></li>
+    <li><span class="dot-before">●</span><div><strong>"프레젠테이션 화면 동기화"</strong> → <strong style="color:#15803d;">"참여자 화면 함께 넘기기"</strong></div></li>
+    <li><span class="dot-before">●</span><div><strong>"프레젠테이션 생성" 버튼</strong> → <strong style="color:#15803d;">"투표 만들기"</strong></div></li>
+    <li><span class="dot-before">●</span><div><strong>목표 응답자 수</strong>: 항상 노출 → <strong style="color:#15803d;">토글 Off 기본값, On 시 입력박스 노출</strong> (위 After 팝업에서 직접 눌러보세요)</div></li>
+  </ul>
+
+  <!-- 목표 응답자 수 미달 시 처리 -->
+  <hr class="divider" />
+  <p style="font-size:14px;font-weight:700;margin-bottom:16px;color:#475569;">목표 응답자 수 미달 시 처리 (방법 1 — 알림 후 선생님이 결정)</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+
+    <!-- 미달 상태 알림 -->
+    <div style="border:2px solid #86efac;border-radius:12px;overflow:hidden;">
+      <div style="background:#dcfce7;padding:8px 14px;font-size:12px;font-weight:700;color:#15803d;">다음 슬라이드로 넘기거나 종료 시도 시</div>
+      <div style="padding:16px;background:#fff;">
+        <!-- 프레젠테이션 하단바 -->
+        <div style="background:#0f172a;border-radius:8px;padding:10px 14px;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;">
+          <div style="background:rgba(251,191,36,0.2);border:1px solid #f59e0b;color:#fcd34d;font-size:11px;font-weight:700;padding:4px 12px;border-radius:20px;">
+            참여 현황 &nbsp; 25 / 30
+          </div>
+          <div style="display:flex;gap:6px;">
+            <div style="width:22px;height:22px;border-radius:4px;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:10px;color:white;">◀</div>
+            <div style="width:22px;height:22px;border-radius:4px;background:rgba(59,130,246,0.4);border:1px solid #3b82f6;display:flex;align-items:center;justify-content:center;font-size:10px;color:white;">▶</div>
+          </div>
+        </div>
+        <!-- 알림 토스트 -->
+        <div style="background:#fffbeb;border:1.5px solid #f59e0b;border-radius:10px;padding:14px 16px;">
+          <div style="font-size:13px;font-weight:700;color:#92400e;margin-bottom:8px;">⚠ 아직 5명이 응답하지 않았어요.</div>
+          <div style="font-size:12px;color:#78350f;margin-bottom:12px;">응답을 더 기다리거나, 지금 바로 진행할 수 있어요.</div>
+          <div style="display:flex;gap:8px;">
+            <button style="flex:1;padding:8px;border-radius:7px;border:1.5px solid #d97706;background:#fff;color:#92400e;font-size:12px;font-weight:600;cursor:pointer;">기다리기</button>
+            <button style="flex:1;padding:8px;border-radius:7px;border:none;background:#f59e0b;color:#fff;font-size:12px;font-weight:600;cursor:pointer;">계속 진행</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 동작 설명 -->
+    <div style="padding:16px;">
+      <div style="font-size:13px;font-weight:700;color:#374151;margin-bottom:14px;">동작 방식</div>
+      <ul style="list-style:none;font-size:13px;line-height:1.8;color:#475569;">
+        <li style="margin-bottom:10px;padding-left:18px;position:relative;">
+          <span style="position:absolute;left:0;color:#f59e0b;">①</span>
+          목표 미달인 상태에서 <strong>다음 슬라이드 이동</strong> 또는 <strong>종료 시도</strong> 시 알림 노출
+        </li>
+        <li style="margin-bottom:10px;padding-left:18px;position:relative;">
+          <span style="position:absolute;left:0;color:#f59e0b;">②</span>
+          <strong>"기다리기"</strong> → 알림 닫힘, 현재 슬라이드 유지
+        </li>
+        <li style="margin-bottom:10px;padding-left:18px;position:relative;">
+          <span style="position:absolute;left:0;color:#f59e0b;">③</span>
+          <strong>"계속 진행"</strong> → 미응답자는 공백 처리, 결과에 반영
+        </li>
+        <li style="padding-left:18px;position:relative;">
+          <span style="position:absolute;left:0;color:#22c55e;">✓</span>
+          목표 인원이 <strong>모두 응답 완료</strong>되면 알림 없이 자동 진행
+        </li>
+      </ul>
+      <div style="margin-top:16px;background:#f0fdf4;border-radius:8px;padding:12px;font-size:12px;color:#15803d;border-left:3px solid #22c55e;">
+        강제로 막지 않고, 선생님이 상황에 맞게 판단할 수 있도록 옵션만 제공
+      </div>
+    </div>
+
+  </div>
+
+  <script>
+    // 목표 응답자 수 토글 인터랙션
+    function toggleTarget() {
+      const toggle = document.getElementById('targetToggle');
+      const inputBox = document.getElementById('targetInputBox');
+      const isOn = toggle.classList.contains('on');
+      if (isOn) {
+        toggle.classList.remove('on');
+        toggle.classList.add('off');
+        inputBox.style.display = 'none';
+      } else {
+        toggle.classList.remove('off');
+        toggle.classList.add('on');
+        inputBox.style.display = 'block';
+        document.getElementById('targetInput').focus();
+      }
+    }
+  </script>
+</div>
+
+<!-- ────────────────────────────────────────────
+     섹션 2. 슬라이드 편집 화면
+──────────────────────────────────────────── -->
+<div class="section">
+  <div class="section-title">
+    🖊️ 슬라이드 편집 화면
+  </div>
+
+  <div class="compare">
+    <!-- BEFORE -->
+    <div class="compare-box before">
+      <div class="compare-label">⚠ 현재 (Before)</div>
+      <div class="compare-body">
+        <div class="mock-editor">
+          <div class="mock-topbar">
+            <span class="mock-title">제목 없음</span>
+            <div class="mock-tabs">
+              <span class="mock-tab active">만들기</span>
+              <span class="mock-tab" style="color:#b91c1c;">결과</span>
+            </div>
+            <div class="mock-actions">
+              <span class="mock-action-btn" style="color:#b91c1c;">설정</span>
+              <span class="mock-action-btn">링크 공유</span>
+              <span class="mock-action-btn primary">프레젠테이션</span>
+            </div>
+          </div>
+          <div class="mock-body">
+            <div class="mock-canvas"><span>슬라이드 영역</span></div>
+            <div class="mock-sidebar">
+              <div class="sidebar-title" style="color:#b91c1c;">유형 편집</div>
+              <div class="option-row">
+                <span class="option-label">정답 선택</span>
+                <div class="mini-toggle off"></div>
+              </div>
+              <div class="option-row">
+                <span class="option-label">시간 제한</span>
+                <div class="mini-toggle off"></div>
+              </div>
+              <div class="option-row">
+                <span class="option-label">응답 수정</span>
+                <div class="mini-toggle off"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AFTER -->
+    <div class="compare-box after">
+      <div class="compare-label">✅ 개선안 (After)</div>
+      <div class="compare-body">
+        <div class="mock-editor">
+          <div class="mock-topbar" style="position:relative;">
+            <span class="mock-title" style="color:#15803d;font-weight:700;">오늘 수업 이해도 확인</span>
+            <!-- 탭: 상단바 가운데 절대 배치 -->
+            <div class="mock-tabs" style="position:absolute;left:50%;transform:translateX(-50%);">
+              <span class="mock-tab active">만들기</span>
+              <span class="mock-tab" style="color:#15803d;font-weight:700;">결과보기</span>
+            </div>
+            <div class="mock-actions">
+              <span class="mock-action-btn" style="color:#15803d;font-weight:700;">투표 설정</span>
+              <span class="mock-action-btn">링크 공유</span>
+              <span class="mock-action-btn primary">프레젠테이션</span>
+            </div>
+          </div>
+          <div class="mock-body">
+            <div class="mock-canvas"><span>슬라이드 영역</span></div>
+            <div class="mock-sidebar">
+              <div class="sidebar-title" style="color:#15803d;">슬라이드 설정</div>
+              <div class="option-row">
+                <span class="option-label">정답 선택</span>
+                <div class="mini-toggle off"></div>
+              </div>
+              <div class="option-row">
+                <span class="option-label">시간 제한</span>
+                <div class="mini-toggle off"></div>
+              </div>
+              <div class="option-row">
+                <span class="option-label">응답 수정</span>
+                <div class="mini-toggle off"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <ul class="change-list">
+    <li><span class="dot-before">●</span><div>우측 패널 <strong>"유형 편집"</strong> → <strong style="color:#15803d;">"슬라이드 설정"</strong> (각 슬라이드의 옵션 설정임을 명확히)</div></li>
+    <li><span class="dot-before">●</span><div>상단 탭 <strong>"결과"</strong> → <strong style="color:#15803d;">"결과보기"</strong> + 가운데 배치 (만들기 ↔ 결과보기 탭 구조 강조)</div></li>
+    <li><span class="dot-before">●</span><div>상단 버튼 <strong>"설정"</strong> → <strong style="color:#15803d;">"투표 설정"</strong> (전체 투표의 설정임을 구분)</div></li>
+    <li><span class="dot-after">●</span><div>제목이 처음 설정 팝업에서 입력했으므로 "제목 없음" 대신 실제 제목 표시</div></li>
+  </ul>
+</div>
+
+<!-- ────────────────────────────────────────────
+     섹션 3. 프레젠테이션 모드
+──────────────────────────────────────────── -->
+<div class="section">
+  <div class="section-title">
+    📺 프레젠테이션 모드
+  </div>
+
+  <div class="compare">
+    <!-- BEFORE -->
+    <div class="compare-box before">
+      <div class="compare-label">⚠ 현재 (Before)</div>
+      <div class="compare-body">
+        <div class="mock-pres">
+          <div class="mock-pres-main">
+            <!-- QR 고정 노출, 작음 -->
+            <div class="mock-pres-qr">QR</div>
+            <div class="mock-pres-ov">
+              <span class="ov-text" style="color:#94a3b8;">슬라이드 콘텐츠</span>
+            </div>
+          </div>
+          <div class="mock-pres-bar">
+            <div class="bar-stats">
+              <span>참여자 0</span> | <span>답변 0</span> | 목표 응답 <span>10</span>
+              <span style="font-size:10px;color:#ef4444;margin-left:8px;">← 3가지 분리 표시</span>
+            </div>
+            <div class="bar-icons">
+              <div class="bar-icon">◀</div>
+              <div class="bar-icon">▶</div>
+              <div class="bar-icon">T</div>
+              <div class="bar-icon">🖼</div>
+              <div class="bar-icon" style="color:#fca5a5;">QR</div>
+              <div class="bar-icon danger" style="opacity:0.4;">✕</div>
+            </div>
+          </div>
+          <div style="padding:8px 16px;background:#1e293b;font-size:11px;color:#ef4444;">
+            ⚠ X 버튼이 눈에 안 띔 · QR 토글 없음 · 호버 시 노출 없음
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- AFTER -->
+    <div class="compare-box after">
+      <div class="compare-label">✅ 개선안 (After) — 상단 영역에 마우스를 올려보세요</div>
+      <div class="compare-body">
+        <div class="mock-pres">
+          <!-- 슬라이드 영역: 상단 20%가 호버 감지 구역 -->
+          <div class="mock-pres-main mock-pres-interactive" id="presDemo">
+
+            <!-- 상단 20% 호버 감지 영역 표시 -->
+            <div class="hover-zone">
+              <span class="hover-zone-label" id="hoverLabel">↑ 마우스를 이 영역에 올리면 종료 버튼 나타남</span>
+            </div>
+
+            <!-- 상단 중앙 X 버튼 (호버 시 노출) -->
+            <div class="top-close-btn" title="프레젠테이션 종료">✕</div>
+            <!-- ESC 힌트 -->
+            <div class="esc-hint">ESC 키로도 종료할 수 있어요</div>
+
+            <!-- QR 버튼 -->
+            <div class="mock-pres-qr-btn">
+              <div class="qr-box">📱 QR<br/><span style="font-size:8px;">클릭 시 확대</span></div>
+            </div>
+
+            <div class="mock-pres-ov" style="margin-top:20px;">
+              <span class="ov-text" style="color:#94a3b8;">슬라이드 콘텐츠 영역</span>
+            </div>
+          </div>
+
+          <div class="mock-pres-bar">
+            <div class="participation-badge">참여 현황 &nbsp; 3 / 10</div>
+            <div class="bar-icons">
+              <div class="bar-icon">◀</div>
+              <div class="bar-icon">▶</div>
+              <div class="bar-icon">T</div>
+              <div class="bar-icon">🖼</div>
+              <div class="bar-icon qr-icon" title="QR On/Off">QR</div>
+              <!-- 하단 X 버튼: 항상 노출 유지 -->
+              <div class="bar-icon danger" style="opacity:1;border:1px solid #ef4444;" title="종료">✕</div>
+            </div>
+          </div>
+
+          <div style="padding:8px 16px;background:#1e293b;font-size:11px;color:#86efac;">
+            ✅ 상단 20% 호버 → 중앙 X 노출 · ESC 종료 · 하단 X 항상 유지
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- X 버튼 동작 시나리오 -->
+  <hr class="divider" />
+  <p style="font-size:14px;font-weight:700;margin-bottom:16px;color:#475569;">종료 버튼 동작 시나리오</p>
+  <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:24px;">
+    <!-- 시나리오 1: 기본 상태 -->
+    <div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">
+      <div style="background:#f1f5f9;padding:6px 12px;font-size:11px;font-weight:700;color:#475569;">① 기본 상태</div>
+      <div style="background:#0f172a;min-height:100px;position:relative;display:flex;align-items:center;justify-content:center;">
+        <span style="font-size:11px;color:#475569;">슬라이드 콘텐츠</span>
+        <!-- 상단 X 숨김 -->
+      </div>
+      <div style="background:rgba(0,0,0,0.85);padding:6px 10px;display:flex;justify-content:flex-end;gap:6px;">
+        <div style="width:20px;height:20px;border-radius:4px;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:10px;color:white;">◀</div>
+        <div style="width:20px;height:20px;border-radius:4px;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:10px;color:white;">▶</div>
+        <div style="width:20px;height:20px;border-radius:4px;background:rgba(239,68,68,0.25);border:1px solid #ef4444;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fca5a5;">✕</div>
+      </div>
+      <div style="padding:6px 10px;background:#1e293b;font-size:10px;color:#94a3b8;">상단 X 숨김 · 하단 X 표시</div>
+    </div>
+
+    <!-- 시나리오 2: 상단 호버 -->
+    <div style="border:2px solid #86efac;border-radius:10px;overflow:hidden;">
+      <div style="background:#dcfce7;padding:6px 12px;font-size:11px;font-weight:700;color:#15803d;">② 상단 20% 호버 시</div>
+      <div style="background:#0f172a;min-height:100px;position:relative;display:flex;align-items:center;justify-content:center;">
+        <!-- 호버 영역 표시 -->
+        <div style="position:absolute;top:0;left:0;right:0;height:28px;background:rgba(239,68,68,0.08);border-bottom:1px dashed rgba(239,68,68,0.3);display:flex;align-items:center;justify-content:center;">
+          <!-- 상단 중앙 X 노출 -->
+          <div style="width:28px;height:28px;border-radius:50%;background:rgba(239,68,68,0.9);color:white;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:700;box-shadow:0 2px 8px rgba(239,68,68,0.5);">✕</div>
+        </div>
+        <div style="margin-top:20px;">
+          <div style="background:rgba(15,23,42,0.8);color:#e2e8f0;font-size:9px;padding:2px 8px;border-radius:4px;text-align:center;">ESC 키로도 종료할 수 있어요</div>
+        </div>
+      </div>
+      <div style="background:rgba(0,0,0,0.85);padding:6px 10px;display:flex;justify-content:flex-end;gap:6px;">
+        <div style="width:20px;height:20px;border-radius:4px;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:10px;color:white;">◀</div>
+        <div style="width:20px;height:20px;border-radius:4px;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:10px;color:white;">▶</div>
+        <div style="width:20px;height:20px;border-radius:4px;background:rgba(239,68,68,0.25);border:1px solid #ef4444;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fca5a5;">✕</div>
+      </div>
+      <div style="padding:6px 10px;background:#1e293b;font-size:10px;color:#86efac;">상단 X 노출 + ESC 힌트 표시</div>
+    </div>
+
+    <!-- 시나리오 3: ESC -->
+    <div style="border:1px solid #e2e8f0;border-radius:10px;overflow:hidden;">
+      <div style="background:#f1f5f9;padding:6px 12px;font-size:11px;font-weight:700;color:#475569;">③ ESC 키 입력 시</div>
+      <div style="background:#0f172a;min-height:100px;position:relative;display:flex;align-items:center;justify-content:center;">
+        <div style="text-align:center;">
+          <div style="background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:6px;padding:4px 12px;font-size:12px;color:white;font-family:monospace;display:inline-block;margin-bottom:6px;">ESC</div>
+          <div style="font-size:10px;color:#64748b;">어느 위치에서든 종료</div>
+        </div>
+      </div>
+      <div style="background:rgba(0,0,0,0.85);padding:6px 10px;display:flex;justify-content:flex-end;gap:6px;">
+        <div style="width:20px;height:20px;border-radius:4px;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:10px;color:white;">◀</div>
+        <div style="width:20px;height:20px;border-radius:4px;background:rgba(255,255,255,0.1);display:flex;align-items:center;justify-content:center;font-size:10px;color:white;">▶</div>
+        <div style="width:20px;height:20px;border-radius:4px;background:rgba(239,68,68,0.25);border:1px solid #ef4444;display:flex;align-items:center;justify-content:center;font-size:10px;color:#fca5a5;">✕</div>
+      </div>
+      <div style="padding:6px 10px;background:#1e293b;font-size:10px;color:#94a3b8;">키보드만으로도 종료 가능</div>
+    </div>
+  </div>
+
+  <!-- QR 확대 시나리오 -->
+  <hr class="divider" />
+  <p style="font-size:14px;font-weight:700;margin-bottom:16px;color:#475569;">QR코드 클릭 시 확대 시나리오</p>
+  <div class="compare">
+    <div class="compare-box before">
+      <div class="compare-label">기본 상태 (축소)</div>
+      <div class="compare-body" style="display:flex;align-items:center;justify-content:center;min-height:120px;background:#f8fafc;">
+        <div style="text-align:center;">
+          <div style="width:60px;height:60px;background:#fff;border:2px solid #e2e8f0;border-radius:8px;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;font-size:11px;color:#374151;">QR</div>
+          <span style="font-size:12px;color:#94a3b8;">우측 상단 고정</span>
+        </div>
+      </div>
+    </div>
+    <div class="compare-box after">
+      <div class="compare-label">클릭 시 (확대 팝업)</div>
+      <div class="compare-body" style="display:flex;align-items:center;justify-content:center;min-height:120px;background:#0f172a;position:relative;">
+        <div style="text-align:center;">
+          <div style="width:120px;height:120px;background:#fff;border:3px solid #3b82f6;border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 8px;font-size:14px;color:#374151;box-shadow:0 0 30px rgba(59,130,246,0.4);">
+            📱 QR
+          </div>
+          <span style="font-size:12px;color:#93c5fd;">다시 클릭하면 닫힘</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <ul class="change-list" style="margin-top:20px;">
+    <li><span class="dot-before">●</span><div><strong>참여자 0 | 답변 0 | 목표 응답 10</strong> (분리) → <strong style="color:#15803d;">참여 현황 3 / 10</strong> (통합, 한눈에 파악)</div></li>
+    <li><span class="dot-before">●</span><div>QR코드 고정 노출 → <strong style="color:#15803d;">하단 QR 버튼으로 On/Off 토글 + 클릭 시 화면 중앙 확대</strong></div></li>
+    <li><span class="dot-before">●</span><div>X 버튼 눈에 안 띔 → <strong style="color:#15803d;">상단 20% 영역 마우스 진입 시 상단 중앙에 X 버튼 페이드인</strong></div></li>
+    <li><span class="dot-after">●</span><div><strong style="color:#15803d;">ESC 키</strong>로 어느 위치에서든 종료 가능</div></li>
+    <li><span class="dot-after">●</span><div>하단 바 X 버튼 <strong style="color:#15803d;">항상 노출 유지</strong> (의도적 종료 경로 보장)</div></li>
+  </ul>
+
+  <script>
+    // 인터랙티브 데모: 상단 영역 호버 시 X 버튼 노출 시뮬레이션
+    const presDemo = document.getElementById('presDemo');
+    if (presDemo) {
+      presDemo.addEventListener('mousemove', function(e) {
+        const rect = presDemo.getBoundingClientRect();
+        const relY = e.clientY - rect.top;
+        const threshold = rect.height * 0.2; // 상단 20%
+        if (relY <= threshold) {
+          presDemo.classList.add('show-close');
+        } else {
+          presDemo.classList.remove('show-close');
+        }
+      });
+      presDemo.addEventListener('mouseleave', function() {
+        presDemo.classList.remove('show-close');
+      });
+    }
+  </script>
+</div>
+
+<!-- ────────────────────────────────────────────
+     섹션 4. 전체 요약
+──────────────────────────────────────────── -->
+<div class="section">
+  <div class="section-title">
+    📌 전체 개선 요약
+  </div>
+  <table style="width:100%;border-collapse:collapse;font-size:13px;">
+    <thead>
+      <tr style="background:#f1f5f9;">
+        <th style="padding:10px 14px;text-align:left;border-bottom:2px solid #e2e8f0;">화면</th>
+        <th style="padding:10px 14px;text-align:left;border-bottom:2px solid #e2e8f0;">문제</th>
+        <th style="padding:10px 14px;text-align:left;border-bottom:2px solid #e2e8f0;">개선</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr style="border-bottom:1px solid #f1f5f9;">
+        <td style="padding:10px 14px;">투표 설정 팝업</td>
+        <td style="padding:10px 14px;color:#b91c1c;">제목 입력 필드 없음</td>
+        <td style="padding:10px 14px;color:#15803d;">투표 제목 입력 필드 추가 (필수)</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f1f5f9;background:#fafafa;">
+        <td style="padding:10px 14px;">투표 설정 팝업</td>
+        <td style="padding:10px 14px;color:#b91c1c;">안내 문구 맥락 오류</td>
+        <td style="padding:10px 14px;color:#15803d;">"설문을 위한 기능을 설정해 주세요."로 통일</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f1f5f9;">
+        <td style="padding:10px 14px;">투표 설정 팝업</td>
+        <td style="padding:10px 14px;color:#b91c1c;">용어 비직관적</td>
+        <td style="padding:10px 14px;color:#15803d;">프레젠테이션 화면 동기화 → 참여자 화면 함께 넘기기</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f1f5f9;background:#fafafa;">
+        <td style="padding:10px 14px;">투표 설정 팝업</td>
+        <td style="padding:10px 14px;color:#b91c1c;">목표 응답자 수 항상 노출</td>
+        <td style="padding:10px 14px;color:#15803d;">토글 Off 기본값, On 시 입력박스 노출</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f1f5f9;">
+        <td style="padding:10px 14px;">슬라이드 편집</td>
+        <td style="padding:10px 14px;color:#b91c1c;">우측 패널명 모호</td>
+        <td style="padding:10px 14px;color:#15803d;">유형 편집 → 슬라이드 설정</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f1f5f9;background:#fafafa;">
+        <td style="padding:10px 14px;">슬라이드 편집</td>
+        <td style="padding:10px 14px;color:#b91c1c;">상단 탭/버튼 용어 및 위치</td>
+        <td style="padding:10px 14px;color:#15803d;">결과 → 결과보기(가운데 배치), 설정 → 투표 설정</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f1f5f9;">
+        <td style="padding:10px 14px;">프레젠테이션</td>
+        <td style="padding:10px 14px;color:#b91c1c;">참여 통계 분리 표시</td>
+        <td style="padding:10px 14px;color:#15803d;">참여 현황 N/10 으로 통합</td>
+      </tr>
+      <tr style="border-bottom:1px solid #f1f5f9;background:#fafafa;">
+        <td style="padding:10px 14px;">프레젠테이션</td>
+        <td style="padding:10px 14px;color:#b91c1c;">QR코드 On/Off 없음, 작음</td>
+        <td style="padding:10px 14px;color:#15803d;">하단 버튼 토글 + 클릭 시 확대 팝업</td>
+      </tr>
+      <tr style="background:#fafafa;">
+        <td style="padding:10px 14px;">프레젠테이션</td>
+        <td style="padding:10px 14px;color:#b91c1c;">X 버튼 눈에 안 띔</td>
+        <td style="padding:10px 14px;color:#15803d;">상단 20% 호버 시 중앙 X 노출 · ESC 키 종료 · 하단 X 항상 유지</td>
+      </tr>
+    </tbody>
+  </table>
+</div>
+
+</body>
+</html>
