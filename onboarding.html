@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>쿨투표 온보딩 프로토타입</title>
+  <style>
+    /* ─── 기본 리셋 ─── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Malgun Gothic', 'Apple SD Gothic Neo', sans-serif; background: #f4f6f9; color: #333; }
+
+    /* ─── 메인 화면 (home1 재현) ─── */
+    .app-header {
+      background: #fff;
+      border-bottom: 1px solid #e8e8e8;
+      padding: 0 32px;
+      height: 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: relative;
+      z-index: 1;
+    }
+    .logo { display: flex; align-items: center; gap: 8px; font-size: 18px; font-weight: 700; color: #222; }
+    .logo-icon { width: 36px; height: 36px; background: #1a73e8; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 16px; }
+    .profile-icon { width: 36px; height: 36px; background: #e0e0e0; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+
+    .app-body { padding: 32px; max-width: 1280px; }
+    .greeting { font-size: 22px; font-weight: 700; margin-bottom: 24px; }
+
+    .toolbar { display: flex; align-items: center; gap: 12px; margin-bottom: 28px; }
+    .btn-primary {
+      background: #fff;
+      border: 2px solid #1a73e8;
+      color: #1a73e8;
+      padding: 10px 20px;
+      border-radius: 8px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      transition: background 0.2s;
+    }
+    .btn-primary:hover { background: #e8f0fe; }
+    .btn-secondary {
+      background: #fff;
+      border: 1.5px solid #ccc;
+      color: #555;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .search-box {
+      margin-left: auto;
+      border: 1.5px solid #ccc;
+      border-radius: 8px;
+      padding: 9px 14px;
+      font-size: 14px;
+      width: 260px;
+      color: #999;
+      background: #fff;
+    }
+
+    .content-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 28px 32px;
+      border: 1px solid #e8e8e8;
+    }
+    .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 40px; }
+    .card-title { font-size: 15px; font-weight: 600; }
+    .sort-box { display: flex; align-items: center; gap: 10px; }
+    .sort-select { border: 1.5px solid #ccc; border-radius: 6px; padding: 6px 10px; font-size: 13px; }
+
+    .empty-state { text-align: center; padding: 60px 0; }
+    .empty-icon { font-size: 60px; margin-bottom: 16px; }
+    .empty-title { font-size: 16px; font-weight: 600; color: #444; margin-bottom: 8px; }
+    .empty-desc { font-size: 14px; color: #888; margin-bottom: 28px; }
+    .btn-empty {
+      background: #1a73e8;
+      color: #fff;
+      border: none;
+      padding: 12px 28px;
+      border-radius: 8px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+    }
+
+    /* ─── 온보딩 오버레이 공통 ─── */
+    .overlay {
+      position: fixed; inset: 0;
+      z-index: 1000;
+      display: flex; align-items: center; justify-content: center;
+    }
+    .overlay.hidden { display: none; }
+
+    /* ─── STEP 0: 웰컴 모달 ─── */
+    .welcome-bg {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,0.65);
+      backdrop-filter: blur(4px);
+    }
+    .welcome-modal {
+      position: relative;
+      background: #fff;
+      border-radius: 20px;
+      padding: 48px 52px;
+      text-align: center;
+      max-width: 480px;
+      width: 90%;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.25);
+      animation: popIn 0.35s cubic-bezier(0.175,0.885,0.32,1.275);
+    }
+    @keyframes popIn {
+      from { transform: scale(0.85); opacity: 0; }
+      to   { transform: scale(1);    opacity: 1; }
+    }
+    .welcome-emoji { font-size: 52px; margin-bottom: 16px; }
+    .welcome-title { font-size: 22px; font-weight: 800; color: #1a1a1a; margin-bottom: 12px; line-height: 1.4; }
+    .welcome-desc { font-size: 14px; color: #666; line-height: 1.7; margin-bottom: 32px; }
+    .welcome-desc strong { color: #1a73e8; }
+    .badge-row { display: flex; justify-content: center; gap: 10px; margin-bottom: 32px; flex-wrap: wrap; }
+    .badge {
+      background: #f0f4ff;
+      color: #1a73e8;
+      border-radius: 20px;
+      padding: 6px 14px;
+      font-size: 13px;
+      font-weight: 600;
+    }
+    .btn-start {
+      background: linear-gradient(135deg, #1a73e8, #4a90e2);
+      color: #fff;
+      border: none;
+      padding: 14px 40px;
+      border-radius: 50px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      width: 100%;
+      transition: transform 0.15s, box-shadow 0.15s;
+      box-shadow: 0 4px 16px rgba(26,115,232,0.4);
+    }
+    .btn-start:hover { transform: translateY(-1px); box-shadow: 0 6px 20px rgba(26,115,232,0.5); }
+    .skip-link { margin-top: 14px; display: block; font-size: 13px; color: #aaa; cursor: pointer; }
+    .skip-link:hover { color: #666; text-decoration: underline; }
+
+    /* ─── STEP 1~3: 스포트라이트 투어 ─── */
+    .spotlight-bg {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,0.0);
+      pointer-events: none;
+    }
+    /* 어두운 마스크 (clip-path로 구멍 뚫기) */
+    .mask-layer {
+      position: absolute; inset: 0;
+      background: rgba(0,0,0,0.6);
+      pointer-events: none;
+      transition: clip-path 0.4s ease;
+    }
+
+    .tooltip-box {
+      position: absolute;
+      background: #fff;
+      border-radius: 14px;
+      padding: 20px 24px;
+      max-width: 300px;
+      box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+      animation: fadeSlide 0.3s ease;
+      pointer-events: auto;
+    }
+    @keyframes fadeSlide {
+      from { opacity: 0; transform: translateY(8px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .tooltip-step { font-size: 11px; color: #1a73e8; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+    .tooltip-title { font-size: 15px; font-weight: 700; color: #1a1a1a; margin-bottom: 8px; line-height: 1.4; }
+    .tooltip-desc { font-size: 13px; color: #555; line-height: 1.6; margin-bottom: 16px; }
+    .tooltip-arrow {
+      position: absolute;
+      width: 12px; height: 12px;
+      background: #fff;
+      transform: rotate(45deg);
+    }
+    .tooltip-arrow.up    { top: -6px; left: 28px; }
+    .tooltip-arrow.left  { left: -6px; top: 24px; }
+
+    .tooltip-nav { display: flex; align-items: center; justify-content: space-between; }
+    .dot-row { display: flex; gap: 6px; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: #ddd; transition: background 0.2s; }
+    .dot.active { background: #1a73e8; }
+    .btn-next {
+      background: #1a73e8; color: #fff; border: none;
+      padding: 8px 20px; border-radius: 20px;
+      font-size: 13px; font-weight: 600; cursor: pointer;
+    }
+    .btn-prev {
+      background: transparent; color: #999; border: none;
+      padding: 8px 12px; font-size: 13px; cursor: pointer;
+    }
+    .nav-right { display: flex; align-items: center; gap: 8px; }
+
+    /* ─── 점멸 효과 (pulse ring) ─── */
+    .pulse-ring {
+      position: fixed;
+      border-radius: 12px;
+      border: 3px solid #1a73e8;
+      pointer-events: none;
+      z-index: 999;
+      animation: pulseRing 1.5s ease-in-out infinite;
+      display: none;
+    }
+    @keyframes pulseRing {
+      0%   { box-shadow: 0 0 0 0 rgba(26,115,232,0.6); opacity: 1; }
+      70%  { box-shadow: 0 0 0 12px rgba(26,115,232,0); opacity: 0.8; }
+      100% { box-shadow: 0 0 0 0 rgba(26,115,232,0); opacity: 1; }
+    }
+
+    /* ─── STEP 4: 완료 모달 ─── */
+    .done-modal {
+      position: relative;
+      background: linear-gradient(145deg, #1a73e8, #0d5cbd);
+      border-radius: 20px;
+      padding: 48px 52px;
+      text-align: center;
+      max-width: 440px;
+      width: 90%;
+      color: #fff;
+      box-shadow: 0 24px 60px rgba(26,115,232,0.4);
+      animation: popIn 0.35s cubic-bezier(0.175,0.885,0.32,1.275);
+    }
+    .done-emoji { font-size: 52px; margin-bottom: 16px; }
+    .done-title { font-size: 22px; font-weight: 800; margin-bottom: 12px; }
+    .done-desc { font-size: 14px; opacity: 0.85; line-height: 1.7; margin-bottom: 32px; }
+    .btn-create {
+      background: #fff;
+      color: #1a73e8;
+      border: none;
+      padding: 14px 40px;
+      border-radius: 50px;
+      font-size: 16px;
+      font-weight: 700;
+      cursor: pointer;
+      width: 100%;
+      transition: transform 0.15s;
+    }
+    .btn-create:hover { transform: translateY(-1px); }
+    .btn-later {
+      margin-top: 12px;
+      display: block;
+      font-size: 13px;
+      color: rgba(255,255,255,0.6);
+      cursor: pointer;
+    }
+    .btn-later:hover { color: rgba(255,255,255,0.9); text-decoration: underline; }
+
+    /* ─── 진행 단계 표시 바 ─── */
+    .progress-bar {
+      position: fixed;
+      top: 0; left: 0; right: 0;
+      height: 3px;
+      background: rgba(255,255,255,0.3);
+      z-index: 1100;
+      display: none;
+    }
+    .progress-fill {
+      height: 100%;
+      background: #1a73e8;
+      transition: width 0.4s ease;
+    }
+  </style>
+</head>
+<body>
+
+<!-- ─── 메인 화면 (home1 재현) ─── -->
+<div class="app-header">
+  <div class="logo">
+    <div class="logo-icon">🐧</div>
+    쿨투표
+  </div>
+  <div class="profile-icon">👤</div>
+</div>
+
+<div class="app-body">
+  <div class="greeting">👋 안녕하세요 OOO님</div>
+
+  <div class="toolbar" id="toolbar">
+    <button class="btn-primary" id="btn-new">＋ 새 프레젠테이션 생성</button>
+    <button class="btn-secondary" id="btn-folder">📁 새폴더</button>
+    <input class="search-box" id="search-box" placeholder="🔍  검색" readonly />
+  </div>
+
+  <!-- 프레젠테이션 섹션 (home3.png 참고 - 빈 상태) -->
+  <div class="content-card" id="presentation-card" style="margin-bottom:16px;">
+    <div class="card-header">
+      <div>
+        <span class="card-title">🧳 프레젠테이션</span>
+      </div>
+      <div class="sort-box">
+        <select class="sort-select"><option>업데이트순</option></select>
+        <span style="font-size:20px; cursor:pointer;">⊞</span>
+        <span style="font-size:20px; cursor:pointer;">☰</span>
+      </div>
+    </div>
+    <!-- 빈 상태 -->
+    <div class="empty-state">
+      <div class="empty-icon">📦</div>
+      <div class="empty-title">프레젠테이션이 존재하지 않습니다</div>
+      <div class="empty-desc">새 프레젠테이션을 생성하여 설문을 시작해 보세요.</div>
+      <button class="btn-empty">＋ 새 프레젠테이션 생성</button>
+    </div>
+  </div>
+
+  <!-- 내 템플릿 섹션 -->
+  <div class="content-card" id="content-card">
+    <div class="card-header">
+      <span class="card-title">📋 내 템플릿 0</span>
+      <div class="sort-box">
+        <select class="sort-select"><option>업데이트순</option></select>
+        <span style="font-size:20px; cursor:pointer;">⊞</span>
+        <span style="font-size:20px; cursor:pointer;">☰</span>
+      </div>
+    </div>
+    <div class="empty-state">
+      <div class="empty-icon">📦</div>
+      <div class="empty-title">템플릿이 존재하지 않습니다</div>
+      <div class="empty-desc">새 프레젠테이션을 생성하여 설문을 시작해 보세요.</div>
+    </div>
+  </div>
+</div>
+
+<!-- 점멸 링 (특정 요소 위에 표시) -->
+<div class="pulse-ring" id="pulse-ring"></div>
+
+<!-- 진행 바 -->
+<div class="progress-bar" id="progress-bar">
+  <div class="progress-fill" id="progress-fill"></div>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     STEP 0: 웰컴 모달
+════════════════════════════════════════ -->
+<div class="overlay" id="step-0">
+  <div class="welcome-bg"></div>
+  <div class="welcome-modal">
+    <div class="welcome-emoji">🎉</div>
+    <div class="welcome-title">쿨투표에 오신 걸<br/>환영해요!</div>
+    <div class="welcome-desc">
+      수업 중 <strong>30초</strong>면 투표를 만들고,<br/>
+      학생들은 <strong>QR코드</strong>로 바로 참여할 수 있어요.<br/>
+      어떻게 사용하는지 간단히 안내해 드릴게요!
+    </div>
+    <div class="badge-row">
+      <span class="badge">⚡ 30초 투표 생성</span>
+      <span class="badge">📱 QR 즉시 참여</span>
+      <span class="badge">📊 실시간 결과</span>
+    </div>
+    <button class="btn-start" onclick="startTour()">시작하기</button>
+    <span class="skip-link" onclick="endTour()">건너뛰기</span>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     STEP 1: 새 프레젠테이션 생성 버튼 안내
+════════════════════════════════════════ -->
+<div class="overlay hidden" id="step-1">
+  <div class="mask-layer" id="mask-1" onclick="nextStep()"></div>
+  <!-- 툴팁은 JS로 위치 조정 -->
+  <div class="tooltip-box" id="tooltip-1" style="top:120px; left:60px;">
+    <div class="tooltip-arrow up"></div>
+    <div class="tooltip-step">STEP 1 / 4</div>
+    <div class="tooltip-title">✨ 투표를 만들어보세요!</div>
+    <div class="tooltip-desc">
+      이 버튼 하나로 투표가 시작됩니다.<br/>
+      문항을 입력하고 저장하면 끝! <br/>
+      QR코드나 링크로 투표를 바로 시작하세요.
+    </div>
+    <div class="tooltip-nav">
+      <div class="dot-row">
+        <div class="dot active"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+      </div>
+      <div class="nav-right">
+        <button class="btn-next" onclick="nextStep()">다음 →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     STEP 2: 폴더 & 검색 안내
+════════════════════════════════════════ -->
+<div class="overlay hidden" id="step-2">
+  <div class="mask-layer" id="mask-2" onclick="nextStep()"></div>
+  <div class="tooltip-box" id="tooltip-2" style="top:120px; left:60px;">
+    <div class="tooltip-arrow up"></div>
+    <div class="tooltip-step">STEP 2 / 4</div>
+    <div class="tooltip-title">📁 깔끔하게 폴더로 관리</div>
+    <div class="tooltip-desc">
+      투표가 많아지면 <strong>폴더</strong>로 분류할 수 있어요.<br/>
+      <strong>검색</strong>으로 원하는 투표를 빠르게 찾을 수 있습니다.
+    </div>
+    <div class="tooltip-nav">
+      <div class="dot-row">
+        <div class="dot"></div>
+        <div class="dot active"></div>
+        <div class="dot"></div>
+      </div>
+      <div class="nav-right">
+        <button class="btn-prev" onclick="prevStep()">← 이전</button>
+        <button class="btn-next" onclick="nextStep()">다음 →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     STEP 3: 프레젠테이션 섹션 안내
+════════════════════════════════════════ -->
+<div class="overlay hidden" id="step-3">
+  <div class="mask-layer" id="mask-3" onclick="nextStep()"></div>
+  <div class="tooltip-box" id="tooltip-3" style="top:340px; left:60px;">
+    <div class="tooltip-arrow up"></div>
+    <div class="tooltip-step">STEP 3 / 4</div>
+    <div class="tooltip-title">🧳 진행한 투표를 한눈에</div>
+    <div class="tooltip-desc">
+      내가 만들고 진행한 투표들을 확인해보세요!<br/>
+      결과를 다시 확인할 수도 있고 수정, 템플릿 등록도 가능해요!
+    </div>
+    <div class="tooltip-nav">
+      <div class="dot-row">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot active"></div>
+        <div class="dot"></div>
+      </div>
+      <div class="nav-right">
+        <button class="btn-prev" onclick="prevStep()">← 이전</button>
+        <button class="btn-next" onclick="nextStep()">다음 →</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     STEP 4: 내 템플릿 섹션 안내
+════════════════════════════════════════ -->
+<div class="overlay hidden" id="step-4">
+  <div class="mask-layer" id="mask-4" onclick="nextStep()"></div>
+  <div class="tooltip-box" id="tooltip-4" style="top:340px; left:60px;">
+    <div class="tooltip-arrow up"></div>
+    <div class="tooltip-step">STEP 4 / 4</div>
+    <div class="tooltip-title">📋 자주 쓰는 투표, 템플릿으로 저장</div>
+    <div class="tooltip-desc">
+      만족도 조사, 출석 확인처럼 자주 쓰는 투표를 <strong>내 템플릿</strong>으로 등록해두면 다음엔 클릭 한 번으로 바로 사용할 수 있어요!
+    </div>
+    <div class="tooltip-nav">
+      <div class="dot-row">
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot"></div>
+        <div class="dot active"></div>
+      </div>
+      <div class="nav-right">
+        <button class="btn-prev" onclick="prevStep()">← 이전</button>
+        <button class="btn-next" onclick="nextStep()">완료</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ════════════════════════════════════════
+     STEP 5: 완료 모달
+════════════════════════════════════════ -->
+<div class="overlay hidden" id="step-5">
+  <div class="welcome-bg"></div>
+  <div class="done-modal">
+    <div class="done-emoji">🚀</div>
+    <div class="done-title">준비 완료!</div>
+    <div class="done-desc">
+      이제 첫 번째 투표를 만들어볼까요?<br/>
+      30초면 충분해요 😊
+    </div>
+    <button class="btn-create" onclick="endTour()">＋ 첫 투표 만들기</button>
+    <span class="btn-later" onclick="endTour()">나중에 직접 둘러볼게요</span>
+  </div>
+</div>
+
+
+<script>
+  // ─── 현재 스텝 관리 ───
+  let currentStep = 0;
+  const totalSteps = 4; // 1~4
+
+  // 진행 바 업데이트
+  function updateProgress(step) {
+    const bar = document.getElementById('progress-bar');
+    const fill = document.getElementById('progress-fill');
+    if (step >= 1 && step <= totalSteps) {
+      bar.style.display = 'block';
+      fill.style.width = ((step / totalSteps) * 100) + '%';
+    } else {
+      bar.style.display = 'none';
+    }
+  }
+
+  // 오버레이 전환
+  function showStep(n) {
+    // 모든 오버레이 숨기기
+    for (let i = 0; i <= 5; i++) {
+      const el = document.getElementById('step-' + i);
+      if (el) el.classList.add('hidden');
+    }
+    // 점멸 링 숨기기
+    document.getElementById('pulse-ring').style.display = 'none';
+
+    const target = document.getElementById('step-' + n);
+    if (target) {
+      target.classList.remove('hidden');
+      updateProgress(n);
+
+      // 스텝 4: 내 템플릿 영역이 화면에 완전히 보이도록 스크롤
+      if (n === 4) {
+        const card = document.getElementById('content-card');
+        if (card) {
+          const rect = card.getBoundingClientRect();
+          const isFullyVisible = rect.top >= 0 && rect.bottom <= window.innerHeight;
+          if (!isFullyVisible) {
+            // 스크롤 중 하이라이트 트랜지션 제거 후 위치 추적
+            card.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+          }
+        }
+      }
+
+      applySpotlight(n);
+    }
+    currentStep = n;
+  }
+
+  function startTour() { showStep(1); }
+  function nextStep()  { showStep(currentStep + 1); }
+  function prevStep()  { if (currentStep > 1) showStep(currentStep - 1); }
+  function endTour() {
+    for (let i = 0; i <= 5; i++) {
+      const el = document.getElementById('step-' + i);
+      if (el) el.classList.add('hidden');
+    }
+    document.getElementById('pulse-ring').style.display = 'none';
+    document.getElementById('progress-bar').style.display = 'none';
+  }
+
+  // ─── 스포트라이트 & 점멸 링 ───
+  function applySpotlight(step) {
+    const ring = document.getElementById('pulse-ring');
+
+    if (step === 1) {
+      // "새 프레젠테이션 생성" 버튼 하이라이트
+      highlightElement('btn-new', 'mask-1', 'tooltip-1', 'bottom', ring);
+    } else if (step === 2) {
+      // 폴더 + 검색 영역 하이라이트 (toolbar 전체)
+      highlightElement('toolbar', 'mask-2', 'tooltip-2', 'bottom', ring);
+    } else if (step === 3) {
+      // 프레젠테이션 섹션 하이라이트
+      highlightElement('presentation-card', 'mask-3', 'tooltip-3', 'top', ring);
+    } else if (step === 4) {
+      // 내 템플릿 섹션 하이라이트
+      highlightElement('content-card', 'mask-4', 'tooltip-4', 'top', ring);
+    }
+  }
+
+  function highlightElement(elemId, maskId, tooltipId, tooltipPos, ring) {
+    const elem = document.getElementById(elemId);
+    const mask = document.getElementById(maskId);
+    const tooltip = document.getElementById(tooltipId);
+    if (!elem || !mask || !tooltip) return;
+
+    const r = elem.getBoundingClientRect();
+    const pad = 10;
+    const x1 = r.left - pad, y1 = r.top - pad;
+    const x2 = r.right + pad, y2 = r.bottom + pad;
+    const W = window.innerWidth, H = window.innerHeight;
+
+    // 구멍 뚫린 마스크 (polygon으로 네모 구멍)
+    mask.style.clipPath = `polygon(
+      0 0, ${W}px 0, ${W}px ${H}px, 0 ${H}px, 0 0,
+      ${x1}px ${y1}px, ${x1}px ${y2}px, ${x2}px ${y2}px, ${x2}px ${y1}px, ${x1}px ${y1}px
+    )`;
+
+    // 점멸 링 위치
+    ring.style.left   = x1 + 'px';
+    ring.style.top    = y1 + 'px';
+    ring.style.width  = (x2 - x1) + 'px';
+    ring.style.height = (y2 - y1) + 'px';
+    ring.style.display = 'block';
+
+    // 툴팁 위치
+    const tooltipW = 300;
+    let tx = r.left;
+    let ty;
+    const arrowEl = tooltip.querySelector('.tooltip-arrow');
+
+    if (tooltipPos === 'bottom') {
+      ty = r.bottom + pad + 16;
+      if (arrowEl) { arrowEl.className = 'tooltip-arrow up'; arrowEl.style.left = '28px'; arrowEl.style.top = '-6px'; arrowEl.style.bottom = ''; }
+    } else {
+      ty = r.top - pad - 170; // 툴팁 높이 예상값
+      if (arrowEl) { arrowEl.className = 'tooltip-arrow'; arrowEl.style.bottom = '-6px'; arrowEl.style.top = ''; arrowEl.style.left = '28px'; arrowEl.style.transform = 'rotate(45deg)'; }
+    }
+
+    // 화면 밖으로 벗어나지 않도록 보정
+    if (tx + tooltipW > W - 16) tx = W - tooltipW - 16;
+    if (tx < 16) tx = 16;
+
+    tooltip.style.left = tx + 'px';
+    tooltip.style.top  = ty + 'px';
+    tooltip.style.position = 'fixed';
+  }
+
+  // ─── 스크롤 시 하이라이트 위치 재계산 ───
+  let scrollTimer = null;
+
+  window.addEventListener('scroll', () => {
+    if (currentStep < 1 || currentStep > 4) return;
+
+    // 스크롤 중에는 clip-path 트랜지션을 꺼서 딜레이 제거
+    const mask = document.getElementById('mask-' + currentStep);
+    if (mask) mask.style.transition = 'none';
+
+    applySpotlight(currentStep);
+
+    // 스크롤이 멈추면 트랜지션 복원
+    clearTimeout(scrollTimer);
+    scrollTimer = setTimeout(() => {
+      if (mask) mask.style.transition = '';
+    }, 150);
+  }, { passive: true });
+
+  // ─── 초기 실행: 웰컴 모달 표시 ───
+  window.addEventListener('load', () => { showStep(0); });
+</script>
+</body>
+</html>
