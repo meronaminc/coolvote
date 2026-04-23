@@ -1,0 +1,490 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>2025년 환금성 결제 제한 영향 분석</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+:root {
+  --bg:#F5F4F0; --surface:#FFFFFF; --border:#DDDBD4;
+  --text-primary:#1A1916; --text-secondary:#6B6960; --text-tertiary:#9E9C94;
+  --red:#B83232; --red-bg:#FBF0F0;
+  --amber:#9A5A0A; --amber-bg:#FDF6EC;
+  --green:#2D6A3F; --green-bg:#F0F7F2;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Noto Sans KR',sans-serif;background:var(--bg);color:var(--text-primary);font-size:13px;line-height:1.6;min-height:100vh}
+.header{background:var(--text-primary);color:white;padding:48px 48px 40px;position:relative;overflow:hidden}
+.header::before{content:'';position:absolute;top:-60px;right:-60px;width:300px;height:300px;border-radius:50%;border:1px solid rgba(255,255,255,0.06)}
+.header::after{content:'';position:absolute;bottom:-80px;right:80px;width:200px;height:200px;border-radius:50%;border:1px solid rgba(255,255,255,0.04)}
+.header-tag{font-family:'DM Mono',monospace;font-size:10px;letter-spacing:0.12em;color:rgba(255,255,255,0.4);text-transform:uppercase;margin-bottom:12px}
+.header h1{font-size:26px;font-weight:700;letter-spacing:-0.02em;line-height:1.2;margin-bottom:10px}
+.header-sub{font-size:12px;color:rgba(255,255,255,0.4);font-weight:300}
+.body{padding:36px 48px 60px}
+.tabs{display:flex;gap:4px;margin-bottom:24px;border-bottom:1px solid var(--border)}
+.tab-btn{padding:8px 20px;font-size:12px;font-weight:500;border:none;background:none;cursor:pointer;color:var(--text-tertiary);border-bottom:2px solid transparent;margin-bottom:-1px;font-family:'Noto Sans KR',sans-serif;transition:color 0.15s}
+.tab-btn.active{color:var(--text-primary);border-bottom:2px solid var(--text-primary)}
+.tab-btn:hover{color:var(--text-secondary)}
+.tab-content{display:none}.tab-content.active{display:block}
+.section-title{font-size:10px;font-family:'DM Mono',monospace;letter-spacing:0.1em;text-transform:uppercase;color:var(--text-tertiary);margin-bottom:14px;padding-bottom:8px;border-bottom:1px solid var(--border)}
+.summary-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:32px}
+.summary-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:20px 22px;animation:fadeUp 0.4s ease both}
+.summary-card:nth-child(3){border-top:3px solid var(--red)}
+.summary-card:nth-child(4){border-top:3px solid var(--red)}
+.card-label{font-size:11px;color:var(--text-tertiary);margin-bottom:8px}
+.card-value{font-size:21px;font-weight:700;letter-spacing:-0.02em;margin-bottom:4px}
+.card-value.danger{color:var(--red)}
+.card-sub{font-size:11px;color:var(--text-tertiary);font-family:'DM Mono',monospace}
+.card-sub.danger{color:var(--red);opacity:0.75}
+.charts-row{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:32px}
+.chart-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:22px 24px}
+.chart-title{font-size:11px;font-weight:500;color:var(--text-secondary);margin-bottom:14px;font-family:'DM Mono',monospace;letter-spacing:0.06em;text-transform:uppercase}
+.legend{display:flex;flex-wrap:wrap;gap:12px;margin-bottom:14px}
+.legend-item{display:flex;align-items:center;gap:6px;font-size:11px;color:var(--text-secondary)}
+.legend-dot{width:8px;height:8px;border-radius:2px;flex-shrink:0}
+.table-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:24px}
+.table-header{padding:16px 24px 12px;border-bottom:1px solid var(--border)}
+.table-header h2{font-size:13px;font-weight:700;margin-bottom:3px}
+.table-header p{font-size:11px;color:var(--text-tertiary)}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead th{background:#F0EFE9;font-size:10px;font-weight:500;color:var(--text-secondary);padding:9px 12px;text-align:left;border-bottom:1px solid var(--border);white-space:nowrap;letter-spacing:0.03em}
+thead th.r{text-align:right} thead th.c{text-align:center}
+tbody td{padding:9px 12px;border-bottom:0.5px solid var(--border);white-space:nowrap;vertical-align:middle}
+tbody td.r{text-align:right;font-family:'DM Mono',monospace;font-size:11px}
+tbody td.c{text-align:center}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover td{background:#FAFAF7}
+tr.total-row td{background:#F0EFE9;font-weight:700;border-top:1px solid var(--border)}
+tr.total-row td.r{font-family:'DM Mono',monospace;font-size:11px}
+.badge{display:inline-block;font-size:10px;font-weight:700;padding:2px 8px;border-radius:3px}
+.badge-danger{background:var(--red-bg);color:var(--red)}
+.badge-warning{background:var(--amber-bg);color:var(--amber)}
+.badge-ok{background:var(--green-bg);color:var(--green)}
+.text-danger{color:var(--red);font-weight:700}
+.text-warning{color:var(--amber);font-weight:500}
+.text-muted{color:var(--text-tertiary)}
+.filter-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:20px}
+.filter-btn{padding:6px 14px;font-size:12px;font-weight:500;border:1px solid var(--border);border-radius:6px;background:none;cursor:pointer;color:var(--text-secondary);font-family:'Noto Sans KR',sans-serif;transition:all 0.15s}
+.filter-btn.active{background:var(--text-primary);color:white;border-color:var(--text-primary)}
+.filter-btn:hover:not(.active){background:var(--bg)}
+.footnote-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:18px 24px;margin-top:16px}
+.footnote-card p{font-size:11px;color:var(--text-secondary);line-height:1.8;padding-left:14px;position:relative}
+.footnote-card p::before{content:'·';position:absolute;left:4px;color:var(--text-tertiary)}
+@keyframes fadeUp{from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:translateY(0)}}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div class="header-tag">NHN KCP PG · 환금성 결제 제한 분석</div>
+  <h1>2025년 환금성 결제 제한<br>영향 분석</h1>
+  <div class="header-sub">기준: 2025년 1월 – 12월 결제 내역 &nbsp;|&nbsp; NHN KCP 환금성 제한 설정값 적용 &nbsp;|&nbsp; 모든 제한 기준: 동일 결제자 기준</div>
+</div>
+
+<div class="body">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="showTab('annual',this)">연간 요약</button>
+    <button class="tab-btn" onclick="showTab('monthly',this)">월별 상세</button>
+    <button class="tab-btn" onclick="showTab('card',this)">카드별 상세</button>
+  </div>
+
+  <!-- ===== 연간 요약 ===== -->
+  <div id="tab-annual" class="tab-content active">
+    <div class="section-title">2025년 전체 결제 현황 요약</div>
+    <div class="summary-grid">
+      <div class="summary-card"><div class="card-label">총 결제 건수</div><div class="card-value">645건</div><div class="card-sub">월 평균 53.8건</div></div>
+      <div class="summary-card"><div class="card-label">총 결제 금액</div><div class="card-value">239,285,410원</div><div class="card-sub">월 평균 19,940,451원</div></div>
+      <div class="summary-card"><div class="card-label">제한 영향 건수</div><div class="card-value danger">67건</div><div class="card-sub danger">전체의 10.4%</div></div>
+      <div class="summary-card"><div class="card-label">제한 영향 금액</div><div class="card-value danger">36,830,000원</div><div class="card-sub danger">전체의 15.4%</div></div>
+    </div>
+
+    <div class="charts-row">
+      <div class="chart-card">
+        <div class="chart-title">월별 결제 금액 및 제한 금액</div>
+        <div class="legend">
+          <span class="legend-item"><span class="legend-dot" style="background:#97C459"></span>정상 처리</span>
+          <span class="legend-item"><span class="legend-dot" style="background:#E24B4A"></span>제한 해당</span>
+        </div>
+        <div style="position:relative;height:220px"><canvas id="monthlyBarChart"></canvas></div>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">카드별 결제 금액 비중 (연간)</div>
+        <div class="legend">
+          <span class="legend-item"><span class="legend-dot" style="background:#378ADD"></span>BC카드</span>
+          <span class="legend-item"><span class="legend-dot" style="background:#E24B4A"></span>삼성카드</span>
+          <span class="legend-item"><span class="legend-dot" style="background:#BA7517"></span>NH카드</span>
+          <span class="legend-item"><span class="legend-dot" style="background:#534AB7"></span>신한카드</span>
+          <span class="legend-item"><span class="legend-dot" style="background:#888780"></span>기타</span>
+        </div>
+        <div style="position:relative;height:200px"><canvas id="annualPieChart"></canvas></div>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <div class="table-header">
+        <h2>카드별 연간 합계</h2>
+        <p>모든 제한 기준은 동일 결제자 기준 적용 &nbsp;·&nbsp; BC카드: 충전 제한 없음(이미지 기준) &nbsp;·&nbsp; 개인: 건당 5만원 미만</p>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>카드</th><th class="c">건수</th><th class="c">공용</th><th class="c">개인</th>
+              <th class="r">결제 금액(원)</th><th class="c">금액 비중</th>
+              <th>제한 기준 (동일 결제자)</th>
+              <th class="c">제한 건수</th><th class="r">제한 금액(원)</th><th class="c">제한 비중</th>
+              <th class="c">영향도</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>BC카드</strong></td><td class="c">410</td><td class="c">391</td><td class="c">19</td>
+              <td class="r">179,680,410</td><td class="c">75.1%</td>
+              <td class="text-muted">제한 없음</td>
+              <td class="c text-muted">0건</td><td class="r text-muted">—</td><td class="c text-muted">0%</td>
+              <td class="c"><span class="badge badge-ok">없음</span></td>
+            </tr>
+            <tr>
+              <td><strong>삼성카드</strong></td><td class="c">116</td><td class="c">104</td><td class="c">12</td>
+              <td class="r">38,900,000</td><td class="c">16.3%</td>
+              <td class="text-muted">월 누적 50만원 초과</td>
+              <td class="c text-warning">35건</td><td class="r text-warning">20,800,000</td><td class="c text-warning">53.5%</td>
+              <td class="c"><span class="badge badge-warning">높음</span></td>
+            </tr>
+            <tr>
+              <td><strong>NH카드</strong></td><td class="c">31</td><td class="c">26</td><td class="c">5</td>
+              <td class="r">13,890,000</td><td class="c">5.8%</td>
+              <td class="text-muted">건당 10만 / 일 50만 / 일 10회 초과</td>
+              <td class="c text-danger">22건</td><td class="r text-danger">13,705,000</td><td class="c text-danger">98.7%</td>
+              <td class="c"><span class="badge badge-danger">매우 높음</span></td>
+            </tr>
+            <tr>
+              <td><strong>신한카드</strong></td><td class="c">31</td><td class="c">22</td><td class="c">9</td>
+              <td class="r">2,475,000</td><td class="c">1.0%</td>
+              <td class="text-muted">일 누적 5만원 초과</td>
+              <td class="c text-warning">5건</td><td class="r text-warning">2,300,000</td><td class="c text-warning">92.9%</td>
+              <td class="c"><span class="badge badge-warning">높음</span></td>
+            </tr>
+            <tr>
+              <td><strong>국민카드</strong></td><td class="c">22</td><td class="c">10</td><td class="c">12</td>
+              <td class="r">2,285,000</td><td class="c">1.0%</td>
+              <td class="text-muted">일 4회 초과 / 월 누적 100만원 초과</td>
+              <td class="c text-warning">5건</td><td class="r text-warning">25,000</td><td class="c text-warning">1.1%</td>
+              <td class="c"><span class="badge badge-warning">모니터링</span></td>
+            </tr>
+            <tr>
+              <td><strong>광주은행</strong></td><td class="c">7</td><td class="c">6</td><td class="c">1</td>
+              <td class="r">1,835,000</td><td class="c">0.8%</td>
+              <td class="text-muted">제한 없음</td>
+              <td class="c text-muted">0건</td><td class="r text-muted">—</td><td class="c text-muted">0%</td>
+              <td class="c"><span class="badge badge-ok">없음</span></td>
+            </tr>
+            <tr>
+              <td><strong>롯데카드</strong></td><td class="c">10</td><td class="c">2</td><td class="c">8</td>
+              <td class="r">95,000</td><td class="c">0.0%</td>
+              <td class="text-muted">일 누적 50만원 초과</td>
+              <td class="c text-muted">0건</td><td class="r text-muted">—</td><td class="c text-muted">0%</td>
+              <td class="c"><span class="badge badge-ok">없음</span></td>
+            </tr>
+            <tr>
+              <td><strong>현대카드</strong></td><td class="c">10</td><td class="c">1</td><td class="c">9</td>
+              <td class="r">85,000</td><td class="c">0.0%</td>
+              <td class="text-muted">건당 11만 / 일 55만 / 일 5회 초과</td>
+              <td class="c text-muted">0건</td><td class="r text-muted">—</td><td class="c text-muted">0%</td>
+              <td class="c"><span class="badge badge-ok">없음</span></td>
+            </tr>
+            <tr>
+              <td><strong>하나카드</strong></td><td class="c">4</td><td class="c">0</td><td class="c">4</td>
+              <td class="r">20,000</td><td class="c">0.0%</td>
+              <td class="text-muted">일한도 100만원 초과</td>
+              <td class="c text-muted">0건</td><td class="r text-muted">—</td><td class="c text-muted">0%</td>
+              <td class="c"><span class="badge badge-ok">없음</span></td>
+            </tr>
+            <tr>
+              <td><strong>씨티카드</strong></td><td class="c">2</td><td class="c">0</td><td class="c">2</td>
+              <td class="r">10,000</td><td class="c">0.0%</td>
+              <td class="text-muted">제한 없음</td>
+              <td class="c text-muted">0건</td><td class="r text-muted">—</td><td class="c text-muted">0%</td>
+              <td class="c"><span class="badge badge-ok">없음</span></td>
+            </tr>
+            <tr>
+              <td><strong>우리카드</strong></td><td class="c">1</td><td class="c">0</td><td class="c">1</td>
+              <td class="r">5,000</td><td class="c">0.0%</td>
+              <td class="text-muted">제한 없음</td>
+              <td class="c text-muted">0건</td><td class="r text-muted">—</td><td class="c text-muted">0%</td>
+              <td class="c"><span class="badge badge-ok">없음</span></td>
+            </tr>
+            <tr>
+              <td><strong>외환카드</strong></td><td class="c">1</td><td class="c">0</td><td class="c">1</td>
+              <td class="r">5,000</td><td class="c">0.0%</td>
+              <td class="text-muted">제한 없음</td>
+              <td class="c text-muted">0건</td><td class="r text-muted">—</td><td class="c text-muted">0%</td>
+              <td class="c"><span class="badge badge-ok">없음</span></td>
+            </tr>
+            <tr class="total-row">
+              <td>합계</td><td class="c">645건</td><td class="c">562</td><td class="c">83</td>
+              <td class="r">239,285,410</td><td class="c">100%</td><td></td>
+              <td class="c text-danger">67건</td><td class="r text-danger">36,830,000</td><td class="c text-danger">15.4%</td>
+              <td></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 월별 상세 ===== -->
+  <div id="tab-monthly" class="tab-content">
+    <div class="section-title">월별 결제 현황 및 제한 영향</div>
+    <div class="table-card">
+      <div class="table-header">
+        <h2>월별 상세 현황</h2>
+        <p>모든 제한 기준 동일 결제자 적용 &nbsp;·&nbsp; 개인: 건당 5만원 미만 / 공용: 건당 5만원 이상</p>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>월</th><th class="c">건수</th><th class="c">공용</th><th class="c">개인</th>
+              <th class="r">결제 금액(원)</th>
+              <th class="c">제한 건수</th><th class="r">제한 금액(원)</th><th class="c">제한 비중</th>
+            </tr>
+          </thead>
+          <tbody id="monthly-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== 카드별 상세 ===== -->
+  <div id="tab-card" class="tab-content">
+    <div class="section-title">카드별 × 월별 상세 현황</div>
+    <div class="filter-row" id="card-filter"></div>
+    <div class="table-card">
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>월</th><th>카드</th><th class="c">건수</th><th class="c">공용</th><th class="c">개인</th>
+              <th class="r">결제 금액(원)</th>
+              <th>제한 기준 (동일 결제자)</th>
+              <th class="c">제한 건수</th><th class="r">제한 금액(원)</th><th class="c">제한 비중</th>
+              <th class="c">영향도</th>
+            </tr>
+          </thead>
+          <tbody id="card-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="footnote-card">
+      <p>모든 제한 기준은 동일 결제자 기준으로 적용 — 한 명의 결제자가 해당 월/일 내 한도를 초과할 때 해당 결제자의 전체 건이 제한 대상</p>
+      <p>BC카드: 이미지 기준 충전 제한 없음(–) — 은행사 무관</p>
+      <p>삼성카드: 동일 결제자 월 누적 50만원 초과 시 해당 결제자 전체 건 제한</p>
+      <p>NH카드: 동일 결제자 기준 건당 10만원 초과 / 일 누적 50만원 초과 / 일 10회 초과 중 하나라도 해당 시 제한</p>
+      <p>신한카드: 동일 결제자 일 누적 5만원 초과 시 제한</p>
+      <p>국민카드: 동일 결제자 일 4회 초과 또는 월 누적 100만원 초과 시 제한</p>
+      <p>현대카드·롯데카드·하나카드: 해당 기간 내 동일 결제자 기준 제한 초과 건 없음</p>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── 데이터 ──
+const monthlyData = [
+  {m:'1월',  cnt:43, pub:35, priv:8,  amt:17873970, rCnt:8, rAmt:4800000},
+  {m:'2월',  cnt:67, pub:57, priv:10, amt:30280140, rCnt:5, rAmt:5000000},
+  {m:'3월',  cnt:77, pub:64, priv:13, amt:24150000, rCnt:2, rAmt:800000},
+  {m:'4월',  cnt:51, pub:42, priv:9,  amt:14165000, rCnt:6, rAmt:2000000},
+  {m:'5월',  cnt:41, pub:34, priv:7,  amt:15180000, rCnt:3, rAmt:1600000},
+  {m:'6월',  cnt:37, pub:30, priv:7,  amt:10485000, rCnt:8, rAmt:3300000},
+  {m:'7월',  cnt:34, pub:27, priv:7,  amt:11502300, rCnt:6, rAmt:3400000},
+  {m:'8월',  cnt:54, pub:44, priv:10, amt:12530000, rCnt:6, rAmt:725000},
+  {m:'9월',  cnt:47, pub:39, priv:8,  amt:20080000, rCnt:5, rAmt:3000000},
+  {m:'10월', cnt:49, pub:40, priv:9,  amt:19720000, rCnt:2, rAmt:1800000},
+  {m:'11월', cnt:69, pub:57, priv:12, amt:25375000, rCnt:7, rAmt:3700000},
+  {m:'12월', cnt:76, pub:63, priv:13, amt:37944000, rCnt:9, rAmt:6705000},
+];
+
+const cardData = [
+  // 1월
+  {m:'1월',card:'BC카드',  cnt:26,pub:24,priv:2,amt:10273970,limit:'제한 없음',           rCnt:0,rAmt:0,      lv:'ok'},
+  {m:'1월',card:'삼성카드', cnt:10,pub:10,priv:0,amt:5400000, limit:'월 누적 50만원 초과',    rCnt:8,rAmt:4800000,lv:'warning'},
+  {m:'1월',card:'NH카드',  cnt:4, pub:3, priv:1,amt:1500000, limit:'건당 10만/일 50만/일 10회 초과', rCnt:0,rAmt:0, lv:'ok'},
+  {m:'1월',card:'신한카드', cnt:3, pub:2, priv:1,amt:700000,  limit:'일 누적 5만원 초과',     rCnt:0,rAmt:0,      lv:'ok'},
+  // 2월
+  {m:'2월',card:'BC카드',  cnt:42,pub:36,priv:6,amt:24080140,limit:'제한 없음',           rCnt:0,rAmt:0,      lv:'ok'},
+  {m:'2월',card:'삼성카드', cnt:11,pub:9, priv:2,amt:4555000, limit:'월 누적 50만원 초과',    rCnt:2,rAmt:2000000,lv:'warning'},
+  {m:'2월',card:'NH카드',  cnt:4, pub:3, priv:1,amt:3005000, limit:'건당 10만/일 50만/일 10회 초과', rCnt:3,rAmt:3000000,lv:'danger'},
+  {m:'2월',card:'국민카드', cnt:4, pub:3, priv:1,amt:200000,  limit:'일 4회/월 누적 100만원 초과', rCnt:0,rAmt:0, lv:'ok'},
+  {m:'2월',card:'신한카드', cnt:4, pub:2, priv:2,amt:100000,  limit:'일 누적 5만원 초과',     rCnt:0,rAmt:0,      lv:'ok'},
+  {m:'2월',card:'광주은행', cnt:2, pub:2, priv:0,amt:340000,  limit:'제한 없음',           rCnt:0,rAmt:0,      lv:'ok'},
+  // 3월
+  {m:'3월',card:'BC카드',  cnt:54,pub:50,priv:4,amt:20474580,limit:'제한 없음',           rCnt:0,rAmt:0,      lv:'ok'},
+  {m:'3월',card:'삼성카드', cnt:12,pub:11,priv:1,amt:3405000, limit:'월 누적 50만원 초과',    rCnt:0,rAmt:0,      lv:'ok'},
+  {m:'3월',card:'NH카드',  cnt:2, pub:2, priv:0,amt:800000,  limit:'건당 10만/일 50만/일 10회 초과', rCnt:2,rAmt:800000, lv:'danger'},
+  {m:'3월',card:'국민카드', cnt:3, pub:1, priv:2,amt:51000,   limit:'일 4회/월 누적 100만원 초과', rCnt:0,rAmt:0, lv:'ok'},
+  {m:'3월',card:'신한카드', cnt:3, pub:2, priv:1,amt:105000,  limit:'일 누적 5만원 초과',     rCnt:0,rAmt:0,      lv:'ok'},
+  {m:'3월',card:'현대카드', cnt:3, pub:0, priv:3,amt:20000,   limit:'건당 11만/일 55만/일 5회 초과', rCnt:0,rAmt:0,lv:'ok'},
+  // 4월
+  {m:'4월',card:'BC카드',  cnt:36,pub:31,priv:5,amt:10765000,limit:'제한 없음',           rCnt:0,rAmt:0,      lv:'ok'},
+  {m:'4월',card:'삼성카드', cnt:11,pub:8, priv:3,amt:2470000, limit:'월 누적 50만원 초과',    rCnt:6,rAmt:2000000,lv:'warning'},
+  {m:'4월',card:'NH카드',  cnt:2, pub:2, priv:0,amt:400000,  limit:'건당 10만/일 50만/일 10회 초과', rCnt:0,rAmt:0, lv:'ok'},
+  {m:'4월',card:'국민카드', cnt:2, pub:1, priv:1,amt:70000,   limit:'일 4회/월 누적 100만원 초과', rCnt:0,rAmt:0, lv:'ok'},
+  // 5월
+  {m:'5월',card:'BC카드',  cnt:28,pub:23,priv:5,amt:11280000,limit:'제한 없음',           rCnt:0,rAmt:0,      lv:'ok'},
+  {m:'5월',card:'삼성카드', cnt:10,pub:10,priv:0,amt:3300000, limit:'월 누적 50만원 초과',    rCnt:2,rAmt:1400000,lv:'warning'},
+  {m:'5월',card:'NH카드',  cnt:2, pub:1, priv:1,amt:205000,  limit:'건당 10만/일 50만/일 10회 초과', rCnt:1,rAmt:200000, lv:'danger'},
+  {m:'5월',card:'국민카드', cnt:1, pub:0, priv:1,amt:5000,    limit:'일 4회/월 누적 100만원 초과', rCnt:0,rAmt:0, lv:'ok'},
+  // 6월
+  {m:'6월',card:'BC카드',  cnt:22,pub:18,priv:4,amt:6285000, limit:'제한 없음',           rCnt:0,rAmt:0,      lv:'ok'},
+  {m:'6월',card:'삼성카드', cnt:6, pub:3, priv:3,amt:1515000, limit:'월 누적 50만원 초과',    rCnt:2,rAmt:1000000,lv:'warning'},
+  {m:'6월',card:'NH카드',  cnt:7, pub:6, priv:1,amt:2310000, limit:'건당 10만/일 50만/일 10회 초과', rCnt:6,rAmt:2300000,lv:'danger'},
+  {m:'6월',card:'신한카드', cnt:2, pub:1, priv:1,amt:375000,  limit:'일 누적 5만원 초과',     rCnt:0,rAmt:0,      lv:'ok'},
+  // 7월
+  {m:'7월',card:'BC카드',  cnt:22,pub:18,priv:4,amt:7602300, limit:'제한 없음',           rCnt:0,rAmt:0,      lv:'ok'},
+  {m:'7월',card:'삼성카드', cnt:7, pub:5, priv:2,amt:2160000, limit:'월 누적 50만원 초과',    rCnt:2,rAmt:1500000,lv:'warning'},
+  {m:'7월',card:'NH카드',  cnt:3, pub:2, priv:1,amt:830000,  limit:'건당 10만/일 50만/일 10회 초과', rCnt:2,rAmt:800000, lv:'danger'},
+  {m:'7월',card:'신한카드', cnt:2, pub:2, priv:0,amt:1100000, limit:'일 누적 5만원 초과',     rCnt:2,rAmt:1100000,lv:'warning'},
+  // 8월
+  {m:'8월',card:'BC카드',  cnt:38,pub:32,priv:6,amt:10030000,limit:'제한 없음',           rCnt:0,rAmt:0,      lv:'ok'},
+  {m:'8월',card:'삼성카드', cnt:7, pub:6, priv:1,amt:2505000, limit:'월 누적 50만원 초과',    rCnt:1,rAmt:700000, lv:'warning'},
+  {m:'8월',card:'NH카드',  cnt:3, pub:3, priv:0,amt:300000,  limit:'건당 10만/일 50만/일 10회 초과', rCnt:0,rAmt:0, lv:'ok'},
+  {m:'8월',card:'국민카드', cnt:7, pub:0, priv:7,amt:35000,   limit:'일 4회/월 누적 100만원 초과', rCnt:5,rAmt:25000,lv:'warning'},
+  // 9월
+  {m:'9월',card:'BC카드',  cnt:32,pub:27,priv:5,amt:15080000,limit:'제한 없음',           rCnt:0,rAmt:0,      lv:'ok'},
+  {m:'9월',card:'삼성카드', cnt:10,pub:9, priv:1,amt:4705000, limit:'월 누적 50만원 초과',    rCnt:4,rAmt:2700000,lv:'warning'},
+  {m:'9월',card:'NH카드',  cnt:1, pub:1, priv:0,amt:300000,  limit:'건당 10만/일 50만/일 10회 초과', rCnt:1,rAmt:300000, lv:'danger'},
+  {m:'9월',card:'신한카드', cnt:3, pub:2, priv:1,amt:100000,  limit:'일 누적 5만원 초과',     rCnt:0,rAmt:0,      lv:'ok'},
+  {m:'9월',card:'광주은행', cnt:1, pub:1, priv:0,amt:395000,  limit:'제한 없음',           rCnt:0,rAmt:0,      lv:'ok'},
+  // 10월
+  {m:'10월',card:'BC카드',  cnt:33,pub:28,priv:5,amt:15820000,limit:'제한 없음',           rCnt:0,rAmt:0,      lv:'ok'},
+  {m:'10월',card:'삼성카드', cnt:10,pub:9, priv:1,amt:3400000, limit:'월 누적 50만원 초과',    rCnt:2,rAmt:1800000,lv:'warning'},
+  {m:'10월',card:'NH카드',  cnt:2, pub:2, priv:0,amt:1800000, limit:'건당 10만/일 50만/일 10회 초과', rCnt:0,rAmt:0, lv:'ok'},
+  {m:'10월',card:'국민카드', cnt:4, pub:2, priv:2,amt:120000,  limit:'일 4회/월 누적 100만원 초과', rCnt:0,rAmt:0, lv:'ok'},
+  // 11월
+  {m:'11월',card:'BC카드',  cnt:46,pub:39,priv:7,amt:18375000,limit:'제한 없음',           rCnt:0,rAmt:0,      lv:'ok'},
+  {m:'11월',card:'삼성카드', cnt:15,pub:13,priv:2,amt:4715000, limit:'월 누적 50만원 초과',    rCnt:4,rAmt:2200000,lv:'warning'},
+  {m:'11월',card:'NH카드',  cnt:3, pub:2, priv:1,amt:1305000, limit:'건당 10만/일 50만/일 10회 초과', rCnt:2,rAmt:1300000,lv:'danger'},
+  {m:'11월',card:'신한카드', cnt:2, pub:1, priv:1,amt:205000,  limit:'일 누적 5만원 초과',     rCnt:1,rAmt:200000, lv:'warning'},
+  {m:'11월',card:'국민카드', cnt:3, pub:2, priv:1,amt:100000,  limit:'일 4회/월 누적 100만원 초과', rCnt:0,rAmt:0, lv:'ok'},
+  // 12월
+  {m:'12월',card:'BC카드',  cnt:46,pub:40,priv:6,amt:24065000,limit:'제한 없음',           rCnt:0,rAmt:0,      lv:'ok'},
+  {m:'12월',card:'삼성카드', cnt:11,pub:10,priv:1,amt:4355000, limit:'월 누적 50만원 초과',    rCnt:4,rAmt:2500000,lv:'warning'},
+  {m:'12월',card:'NH카드',  cnt:6, pub:4, priv:2,amt:3325000, limit:'건당 10만/일 50만/일 10회 초과', rCnt:3,rAmt:3205000,lv:'danger'},
+  {m:'12월',card:'신한카드', cnt:3, pub:2, priv:1,amt:1005000, limit:'일 누적 5만원 초과',     rCnt:2,rAmt:1000000,lv:'warning'},
+  {m:'12월',card:'광주은행', cnt:5, pub:4, priv:1,amt:1100000, limit:'제한 없음',           rCnt:0,rAmt:0,      lv:'ok'},
+  {m:'12월',card:'씨티카드', cnt:2, pub:0, priv:2,amt:10000,   limit:'제한 없음',           rCnt:0,rAmt:0,      lv:'ok'},
+  {m:'12월',card:'롯데카드', cnt:5, pub:1, priv:4,amt:45000,   limit:'일 누적 50만원 초과',   rCnt:0,rAmt:0,      lv:'ok'},
+];
+
+// ── 탭 전환 ──
+function showTab(id, btn) {
+  document.querySelectorAll('.tab-content').forEach(el=>el.classList.remove('active'));
+  document.querySelectorAll('.tabs .tab-btn').forEach(el=>el.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── 월별 테이블 ──
+const mBody = document.getElementById('monthly-tbody');
+let mTotal = {cnt:0,pub:0,priv:0,amt:0,rCnt:0,rAmt:0};
+monthlyData.forEach(r=>{
+  const pct = r.rAmt>0 ? (r.rAmt/r.amt*100).toFixed(1)+'%' : '0%';
+  const cls = r.rCnt>0 ? 'text-danger' : '';
+  mBody.innerHTML += `<tr>
+    <td><strong>${r.m}</strong></td>
+    <td class="c">${r.cnt}</td><td class="c">${r.pub}</td><td class="c">${r.priv}</td>
+    <td class="r">${r.amt.toLocaleString()}</td>
+    <td class="c ${cls}">${r.rCnt}건</td>
+    <td class="r ${cls}">${r.rAmt>0?r.rAmt.toLocaleString():'—'}</td>
+    <td class="c ${cls}">${pct}</td>
+  </tr>`;
+  mTotal.cnt+=r.cnt; mTotal.pub+=r.pub; mTotal.priv+=r.priv;
+  mTotal.amt+=r.amt; mTotal.rCnt+=r.rCnt; mTotal.rAmt+=r.rAmt;
+});
+mBody.innerHTML += `<tr class="total-row">
+  <td>합계</td><td class="c">${mTotal.cnt}건</td><td class="c">${mTotal.pub}</td><td class="c">${mTotal.priv}</td>
+  <td class="r">${mTotal.amt.toLocaleString()}</td>
+  <td class="c text-danger">${mTotal.rCnt}건</td>
+  <td class="r text-danger">${mTotal.rAmt.toLocaleString()}</td>
+  <td class="c text-danger">${(mTotal.rAmt/mTotal.amt*100).toFixed(1)}%</td>
+</tr>`;
+
+// ── 카드 필터 ──
+const allCards = ['전체', ...new Set(cardData.map(r=>r.card))];
+const filterRow = document.getElementById('card-filter');
+allCards.forEach((c,i)=>{
+  const btn = document.createElement('button');
+  btn.className = 'filter-btn' + (i===0?' active':'');
+  btn.textContent = c;
+  btn.onclick = ()=>{
+    document.querySelectorAll('.filter-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    renderCards(c==='전체'?null:c);
+  };
+  filterRow.appendChild(btn);
+});
+
+function renderCards(filter) {
+  const tbody = document.getElementById('card-tbody');
+  const data = filter ? cardData.filter(r=>r.card===filter) : cardData;
+  tbody.innerHTML = '';
+  data.forEach(r=>{
+    const pct = r.rAmt>0?(r.rAmt/r.amt*100).toFixed(1)+'%':'0%';
+    const lc = r.lv==='danger'?'text-danger':r.lv==='warning'?'text-warning':'text-muted';
+    const badge = r.lv==='danger'?'<span class="badge badge-danger">매우 높음</span>'
+                :r.lv==='warning'?'<span class="badge badge-warning">높음</span>'
+                :'<span class="badge badge-ok">없음</span>';
+    tbody.innerHTML += `<tr>
+      <td><strong>${r.m}</strong></td><td>${r.card}</td>
+      <td class="c">${r.cnt}</td><td class="c">${r.pub}</td><td class="c">${r.priv}</td>
+      <td class="r">${r.amt.toLocaleString()}</td>
+      <td class="text-muted" style="font-size:11px">${r.limit}</td>
+      <td class="c ${lc}">${r.rCnt>0?r.rCnt+'건':'0건'}</td>
+      <td class="r ${lc}">${r.rAmt>0?r.rAmt.toLocaleString():'—'}</td>
+      <td class="c ${lc}">${pct}</td>
+      <td class="c">${badge}</td>
+    </tr>`;
+  });
+}
+renderCards(null);
+
+// ── 차트 ──
+new Chart(document.getElementById('monthlyBarChart'),{
+  type:'bar',
+  data:{
+    labels:monthlyData.map(r=>r.m),
+    datasets:[
+      {label:'정상 처리', data:monthlyData.map(r=>r.amt-r.rAmt), backgroundColor:'#97C459', stack:'a'},
+      {label:'제한 해당', data:monthlyData.map(r=>r.rAmt), backgroundColor:'#E24B4A', stack:'a'},
+    ]
+  },
+  options:{responsive:true,maintainAspectRatio:false,
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:(ctx)=>` ${ctx.dataset.label}: ${ctx.parsed.y.toLocaleString()}원`}}},
+    scales:{
+      x:{stacked:true,ticks:{color:'#9E9C94',font:{size:10}},grid:{display:false}},
+      y:{stacked:true,ticks:{color:'#9E9C94',font:{size:10},callback:(v)=>v>=1000000?(v/1000000).toFixed(0)+'백만':v},grid:{color:'rgba(0,0,0,0.05)'}}
+    }}
+});
+
+new Chart(document.getElementById('annualPieChart'),{
+  type:'doughnut',
+  data:{
+    labels:['BC카드','삼성카드','NH카드','신한카드','기타'],
+    datasets:[{data:[179680410,38900000,13890000,2475000,4340000],
+      backgroundColor:['#378ADD','#E24B4A','#BA7517','#534AB7','#888780'],
+      borderWidth:3,borderColor:'#FFFFFF'}]
+  },
+  options:{responsive:true,maintainAspectRatio:false,cutout:'60%',
+    plugins:{legend:{display:false},tooltip:{callbacks:{label:(ctx)=>{
+      const t=ctx.dataset.data.reduce((a,b)=>a+b,0);
+      return ` ${ctx.parsed.toLocaleString()}원 (${(ctx.parsed/t*100).toFixed(1)}%)`;
+    }}}}}
+});
+</script>
+</body>
+</html>
