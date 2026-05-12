@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>환경설정 - 쿨메신저</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #c8c8c8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    font-family: 'Malgun Gothic', '맑은 고딕', dotum, sans-serif;
+    font-size: 12px;
+    color: #222;
+  }
+
+  /* 창 전체 */
+  .win {
+    width: 510px;
+    background: #f0f0f0;
+    border: 1px solid #888;
+    border-radius: 6px 6px 4px 4px;
+    box-shadow: 2px 4px 12px rgba(0,0,0,0.28);
+    overflow: visible;
+  }
+
+  /* 타이틀바 */
+  .titlebar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 7px 10px 7px 10px;
+    background: linear-gradient(to bottom, #e8e8e8, #d4d4d4);
+    border-bottom: 1px solid #aaa;
+    border-radius: 6px 6px 0 0;
+  }
+  .titlebar-left {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: bold;
+    color: #222;
+  }
+  .titlebar-icon {
+    width: 18px;
+    height: 18px;
+    background: #4a7abf;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 11px;
+    color: white;
+  }
+  .titlebar-close {
+    width: 18px;
+    height: 18px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    color: #555;
+    cursor: pointer;
+    border-radius: 3px;
+  }
+  .titlebar-close:hover { background: #e0e0e0; color: #222; }
+
+  /* 탭 영역 */
+  .tabs {
+    display: flex;
+    background: #f0f0f0;
+    border-bottom: 2px solid #aaa;
+    padding: 0 6px;
+    gap: 1px;
+    margin-top: 2px;
+  }
+  .tab {
+    padding: 5px 13px;
+    font-size: 12px;
+    color: #333;
+    cursor: default;
+    border: 1px solid transparent;
+    border-bottom: none;
+    border-radius: 3px 3px 0 0;
+    margin-bottom: -2px;
+    background: transparent;
+    position: relative;
+    user-select: none;
+  }
+  .tab:hover:not(.active) { background: #e4e4e4; }
+  .tab.active {
+    background: #ffffff;
+    border-color: #aaa;
+    color: #000;
+    font-weight: bold;
+    z-index: 1;
+  }
+
+  /* 컨텐츠 영역 */
+  .content {
+    background: #ffffff;
+    border: 1px solid #ccc;
+    margin: 6px 8px 6px 8px;
+    border-radius: 2px;
+  }
+
+  /* 각 섹션 행 */
+  .section {
+    display: flex;
+    border-bottom: 1px solid #e4e4e4;
+    min-height: 32px;
+  }
+  .section:last-child { border-bottom: none; }
+
+  .section-label {
+    width: 68px;
+    min-width: 68px;
+    padding: 10px 8px 10px 12px;
+    font-size: 12px;
+    font-weight: bold;
+    color: #333;
+    border-right: 1px solid #e4e4e4;
+    display: flex;
+    align-items: flex-start;
+    background: #fafafa;
+  }
+
+  .section-items {
+    flex: 1;
+    padding: 8px 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  /* 체크박스 행 */
+  .check-row {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 12px;
+    color: #222;
+    line-height: 1.4;
+    cursor: default;
+  }
+
+  /* 커스텀 체크박스 */
+  .cb {
+    width: 13px;
+    height: 13px;
+    min-width: 13px;
+    border: 1px solid #888;
+    border-radius: 2px;
+    background: #fff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    position: relative;
+  }
+  .cb.checked {
+    background: #fff;
+    border-color: #666;
+  }
+  .cb.checked::after {
+    content: '';
+    display: block;
+    width: 8px;
+    height: 5px;
+    border-left: 2px solid #333;
+    border-bottom: 2px solid #333;
+    transform: rotate(-45deg) translate(1px, -1px);
+  }
+
+  /* 비활성화 */
+  .check-row.disabled {
+    color: #aaa;
+    cursor: not-allowed;
+  }
+  .cb.disabled {
+    background: #ebebeb;
+    border-color: #ccc;
+  }
+
+  /* 툴팁 */
+  .tip-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .tip-wrap:hover .tooltip { opacity: 1; transform: translateY(0); }
+  .tooltip {
+    position: absolute;
+    bottom: calc(100% + 8px);
+    left: -2px;
+    background: #2b2b2b;
+    color: #f0f0f0;
+    font-size: 11.5px;
+    line-height: 1.65;
+    padding: 8px 12px;
+    border-radius: 5px;
+    white-space: nowrap;
+    opacity: 0;
+    transform: translateY(5px);
+    transition: opacity 0.16s ease, transform 0.16s ease;
+    z-index: 999;
+    pointer-events: none;
+  }
+  .tooltip::after {
+    content: '';
+    position: absolute;
+    top: 100%;
+    left: 14px;
+    border: 5px solid transparent;
+    border-top-color: #2b2b2b;
+  }
+  .tooltip .t1 { display: block; }
+  .tooltip .t2 { display: block; color: #7dd3b8; font-size: 11px; margin-top: 2px; }
+
+  /* 하단 버튼 영역 */
+  .footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 6px;
+    padding: 8px 12px 10px 12px;
+  }
+  .btn {
+    padding: 4px 22px;
+    font-size: 12px;
+    font-family: inherit;
+    border: 1px solid #999;
+    border-radius: 3px;
+    background: linear-gradient(to bottom, #f8f8f8, #e8e8e8);
+    color: #222;
+    cursor: pointer;
+    min-width: 54px;
+  }
+  .btn:hover { background: linear-gradient(to bottom, #e8e8e8, #d8d8d8); }
+  .btn:active { background: #d0d0d0; transform: translateY(1px); }
+</style>
+</head>
+<body>
+
+<div class="win">
+
+  <!-- 타이틀바 -->
+  <div class="titlebar">
+    <div class="titlebar-left">
+      <div class="titlebar-icon">🐧</div>
+      환경설정
+    </div>
+    <div class="titlebar-close">✕</div>
+  </div>
+
+  <!-- 탭 -->
+  <div class="tabs">
+    <div class="tab active">기본설정</div>
+    <div class="tab">보기</div>
+    <div class="tab">글꼴서식</div>
+    <div class="tab">다운로드</div>
+    <div class="tab">상태</div>
+    <div class="tab">소리</div>
+    <div class="tab">탭서비스</div>
+    <div class="tab">계정설정</div>
+  </div>
+
+  <!-- 컨텐츠 -->
+  <div class="content">
+
+    <!-- 로그인 섹션 -->
+    <div class="section">
+      <div class="section-label">로그인</div>
+      <div class="section-items">
+        <div class="check-row">
+          <div class="cb checked"></div>
+          <span>윈도우 시작 시 자동으로 실행 됩니다.</span>
+        </div>
+        <div class="check-row">
+          <div class="cb checked"></div>
+          <span>메신저 실행 시 자동으로 접속됩니다.</span>
+        </div>
+        <div class="check-row">
+          <div class="cb"></div>
+          <span>처음 로그인 시에 창을 감추게 합니다.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 사용성 섹션 -->
+    <div class="section">
+      <div class="section-label">사용성</div>
+      <div class="section-items">
+        <div class="check-row">
+          <div class="cb checked"></div>
+          <span>사용자 선택화면을 체크박스로 사용합니다.</span>
+        </div>
+        <div class="check-row">
+          <div class="cb"></div>
+          <span>조직도에 포함된 사용자(온라인/전체) 수를 표시합니다.</span>
+        </div>
+        <div class="check-row">
+          <div class="cb"></div>
+          <span>상대방을 더블클릭할 때 채팅창을 기본으로 합니다.</span>
+        </div>
+        <div class="check-row">
+          <div class="cb"></div>
+          <span>메신저를 최상위로 보이게 설정합니다.</span>
+        </div>
+        <div class="check-row">
+          <div class="cb"></div>
+          <span>메시지 작성 창 종료 시 확인창을 표시하지 않습니다.</span>
+        </div>
+        <div class="check-row">
+          <div class="cb"></div>
+          <span>메시지 삭제 시 확인창을 표시하지 않습니다.</span>
+        </div>
+        <div class="check-row">
+          <div class="cb checked"></div>
+          <span>메시지함 실행 시 읽지 않은 메시지만 먼저 보여 줍니다.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 알림 섹션 -->
+    <div class="section">
+      <div class="section-label">알림</div>
+      <div class="section-items">
+        <div class="check-row">
+          <div class="cb checked"></div>
+          <span>수신확인 알림메시지를 받습니다.</span>
+        </div>
+        <div class="check-row">
+          <div class="cb"></div>
+          <span>메시지를 수신할 때, 작업표시줄 플래시 효과를 하지 않습니다.</span>
+        </div>
+        <div class="check-row">
+          <div class="cb"></div>
+          <span>읽지않은 공지사항 알림창을 띄우지 않습니다.</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- 정보 섹션 (라이선스 만료 - 비활성화 + 툴팁) -->
+    <div class="section">
+      <div class="section-label">정보</div>
+      <div class="section-items">
+
+        <div class="check-row disabled">
+          <div class="tip-wrap">
+            <div class="cb disabled"></div>
+            <span>로그인 후 팝업창을 차단합니다.</span>
+            <div class="tooltip">
+              <span class="t1">서비스 이용기간이 만료되어 해당 기능을 사용할 수 없습니다.</span>
+              <span class="t2">라이선스 갱신 후 이용해 보세요.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="check-row disabled">
+          <div class="tip-wrap">
+            <div class="cb disabled"></div>
+            <span>슬라이딩 팝업을 차단합니다.</span>
+            <div class="tooltip">
+              <span class="t1">서비스 이용기간이 만료되어 해당 기능을 사용할 수 없습니다.</span>
+              <span class="t2">라이선스 갱신 후 이용해 보세요.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="check-row disabled">
+          <div class="tip-wrap">
+            <div class="cb disabled"></div>
+            <span>조직도 하단 콘텐츠 소식을 표시하지 않습니다.</span>
+            <div class="tooltip">
+              <span class="t1">서비스 이용기간이 만료되어 해당 기능을 사용할 수 없습니다.</span>
+              <span class="t2">라이선스 갱신 후 이용해 보세요.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="check-row disabled">
+          <div class="tip-wrap">
+            <div class="cb disabled"></div>
+            <span>좌측 하단의 배너를 표시하지 않습니다.</span>
+            <div class="tooltip">
+              <span class="t1">서비스 이용기간이 만료되어 해당 기능을 사용할 수 없습니다.</span>
+              <span class="t2">라이선스 갱신 후 이용해 보세요.</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div><!-- /content -->
+
+  <!-- 하단 버튼 -->
+  <div class="footer">
+    <button class="btn">확인</button>
+    <button class="btn">취소</button>
+  </div>
+
+</div>
+
+</body>
+</html>
